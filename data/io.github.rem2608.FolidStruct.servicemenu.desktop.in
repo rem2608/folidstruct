@@ -1,0 +1,20 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=inode/directory;
+Actions=new;manage;
+X-KDE-Submenu=FolidStruct
+X-KDE-RequiredNumberOfUrls=1
+Icon=io.github.rem2608.FolidStruct
+
+[Desktop Action new]
+Name=New project…
+Name[it]=Nuovo progetto…
+Icon=folder-new
+Exec=@COMMAND_PATH@ --new --dir %f
+
+[Desktop Action manage]
+Name=Manage templates…
+Name[it]=Gestisci modelli…
+Icon=io.github.rem2608.FolidStruct
+Exec=@COMMAND_PATH@

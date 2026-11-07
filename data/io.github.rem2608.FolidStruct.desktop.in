@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=FolidStruct
+GenericName=Project Folder Templates
+GenericName[it]=Modelli di cartelle per progetti
+Comment=Create project folder structures from templates
+Comment[it]=Crea strutture di cartelle per i progetti a partire da modelli
+Exec=@COMMAND_PATH@
+Icon=io.github.rem2608.FolidStruct
+Terminal=false
+Categories=Utility;FileTools;GTK;GNOME;
+Keywords=folder;project;template;directory;structure;
+Keywords[it]=cartella;progetto;modello;directory;struttura;
+StartupNotify=true

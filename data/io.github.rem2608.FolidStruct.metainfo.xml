@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.rem2608.FolidStruct</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>FolidStruct</name>
+  <summary>Create project folder structures from templates</summary>
+  <summary xml:lang="it">Crea strutture di cartelle per i progetti a partire da modelli</summary>
+
+  <description>
+    <p>
+      FolidStruct creates the folder structure of a new project with one click from
+      your file manager's context menu, so every project uses the same folder
+      names and your archive stays consistent.
+    </p>
+    <p xml:lang="it">
+      FolidStruct crea la struttura di cartelle di un nuovo progetto con un clic dal
+      menù contestuale del file manager, così ogni progetto usa gli stessi nomi
+      e l'archivio resta ordinato.
+    </p>
+    <ul>
+      <li>Define any number of templates, each with its own folders</li>
+      <li xml:lang="it">Definisci tutti i modelli che vuoi, ognuno con le sue cartelle</li>
+      <li>Optional date and progressive number in the project folder name</li>
+      <li xml:lang="it">Data e numero progressivo facoltativi nel nome della cartella</li>
+      <li>Works with GNOME Files, Nemo, Caja and Dolphin</li>
+      <li xml:lang="it">Funziona con File di GNOME, Nemo, Caja e Dolphin</li>
+    </ul>
+  </description>
+
+  <developer id="io.github.rem2608">
+    <name>rem2608</name>
+  </developer>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/rem2608/folidstruct/main/data/screenshots/new-project.png</image>
+      <caption>Creating a new project</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/rem2608/folidstruct/main/data/screenshots/manager.png</image>
+      <caption>Editing a template</caption>
+    </screenshot>
+  </screenshots>
+
+  <launchable type="desktop-id">io.github.rem2608.FolidStruct.desktop</launchable>
+
+  <url type="homepage">https://github.com/rem2608/folidstruct</url>
+  <url type="bugtracker">https://github.com/rem2608/folidstruct/issues</url>
+  <url type="vcs-browser">https://github.com/rem2608/folidstruct</url>
+
+  <categories>
+    <category>Utility</category>
+  </categories>
+
+  <keywords>
+    <keyword>folder</keyword>
+    <keyword>project</keyword>
+    <keyword>template</keyword>
+    <keyword xml:lang="it">cartella</keyword>
+    <keyword xml:lang="it">progetto</keyword>
+    <keyword xml:lang="it">modello</keyword>
+  </keywords>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+
+  <content_rating type="oars-1.1"/>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#99c1f1</color>
+    <color type="primary" scheme_preference="dark">#1a5fb4</color>
+  </branding>
+
+  <releases>
+    <release version="0.1.0" date="2026-11-07">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

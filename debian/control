@@ -1,0 +1,26 @@
+Source: folidstruct
+Section: utils
+Priority: optional
+Maintainer: rem2608 <m_ricchi@ikmail.com>
+Build-Depends: debhelper-compat (= 13), meson (>= 0.62), python3
+Standards-Version: 4.7.0
+Homepage: https://github.com/rem2608/folidstruct
+Vcs-Browser: https://github.com/rem2608/folidstruct
+Vcs-Git: https://github.com/rem2608/folidstruct.git
+Rules-Requires-Root: no
+
+Package: folidstruct
+Architecture: all
+Depends: ${misc:Depends},
+         python3 (>= 3.10),
+         python3-gi,
+         gir1.2-gtk-4.0,
+         gir1.2-adw-1 (>= 1.5)
+Recommends: python3-nautilus | nemo-python | python3-caja | dolphin
+Description: create project folder structures from templates
+ FolidStruct creates the folder structure of a new project with one click from the
+ file manager's context menu, so every project uses the same folder names.
+ .
+ Templates define the subfolders; the project folder name can start with the
+ date and a progressive number. GNOME Files (Nautilus), Nemo, Caja and Dolphin
+ are supported.

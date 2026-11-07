@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- FolidStruct icon: a folder on a circuit board. Concept by rem2608. -->
+  <defs>
+    <clipPath id="board">
+      <rect x="8" y="8" width="112" height="110" rx="14"/>
+    </clipPath>
+  </defs>
+
+  <!-- Board -->
+  <rect x="8" y="8" width="112" height="110" rx="14" fill="#3584e4"/>
+
+  <!-- Traces -->
+  <g clip-path="url(#board)">
+    <g fill="none" stroke="#1a5fb4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M42 34V22"/>
+      <path d="M70 41V26l8-8V0"/>
+      <path d="M92 41V30l8-8"/>
+      <path d="M24 60H0"/>
+      <path d="M24 80H14"/>
+      <path d="M104 64h24"/>
+      <path d="M104 82h10"/>
+      <path d="M40 98v8l-6 6v16"/>
+      <path d="M64 98v12"/>
+      <path d="M88 98v6l6 6v18"/>
+    </g>
+    <g fill="#1a5fb4">
+      <circle cx="42" cy="22" r="3.5"/>
+      <circle cx="100" cy="22" r="3.5"/>
+      <circle cx="14" cy="80" r="3.5"/>
+      <circle cx="114" cy="82" r="3.5"/>
+      <circle cx="64" cy="110" r="3.5"/>
+    </g>
+  </g>
+
+  <!-- Bolts -->
+  <g fill="#3584e4" stroke="#1a5fb4" stroke-width="3">
+    <circle cx="19" cy="19" r="3.5"/>
+    <circle cx="109" cy="19" r="3.5"/>
+    <circle cx="19" cy="107" r="3.5"/>
+    <circle cx="109" cy="107" r="3.5"/>
+  </g>
+
+  <!-- Folder -->
+  <path d="M24 40a6 6 0 0 1 6-6h18l7 7h43a6 6 0 0 1 6 6v8H24z" fill="#99c1f1"/>
+  <rect x="24" y="46" width="80" height="52" rx="6" fill="#fff"/>
+</svg>

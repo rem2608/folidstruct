@@ -1,0 +1,51 @@
+name: Release
+
+# Push a tag like v1.2.3 to build the Debian package and publish a release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  deb:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check versions
+        run: scripts/check-version.sh "$GITHUB_REF_NAME"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debhelper meson desktop-file-utils appstream
+
+      - name: Build package
+        run: |
+          dpkg-buildpackage -b -us -uc
+          mkdir dist
+          mv ../folidstruct_*.deb dist/
+
+      - name: Check package
+        run: |
+          dpkg-deb --info dist/*.deb
+          dpkg-deb --contents dist/*.deb
+
+      - name: Install package
+        run: |
+          sudo apt-get install -y ./dist/*.deb
+          folidstruct --version
+          folidstruct --init
+          mkdir /tmp/work
+          folidstruct --new "$(python3 -c 'import json,os; print(json.load(open(os.path.expanduser("~/.config/folidstruct/config.json")))["templates"][0]["name"])')" \
+            --name Test --dir /tmp/work
+          find /tmp/work
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.deb \
+            --title "FolidStruct ${GITHUB_REF_NAME#v}" --generate-notes

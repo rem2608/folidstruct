@@ -1,0 +1,4 @@
+option('nautilus', type: 'boolean', value: true, description: 'Install the GNOME Files (Nautilus) extension')
+option('nemo', type: 'boolean', value: true, description: 'Install the Nemo extension')
+option('caja', type: 'boolean', value: true, description: 'Install the Caja extension')
+option('dolphin', type: 'boolean', value: true, description: 'Install the Dolphin service menu')

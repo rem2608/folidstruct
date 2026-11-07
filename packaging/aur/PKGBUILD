@@ -1,0 +1,30 @@
+# Maintainer: rem2608 <m_ricchi@ikmail.com>
+pkgname=folidstruct
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Create project folder structures from templates, from your file manager's context menu"
+arch=('any')
+url="https://github.com/rem2608/folidstruct"
+license=('GPL-3.0-or-later')
+depends=('python' 'python-gobject' 'gtk4' 'libadwaita')
+makedepends=('meson')
+checkdepends=('desktop-file-utils' 'appstream')
+optdepends=('python-nautilus: GNOME Files context menu'
+            'nemo-python: Nemo context menu'
+            'python-caja: Caja context menu'
+            'dolphin: Dolphin context menu')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')  # replaced by scripts/update-aur.sh when releasing
+
+build() {
+  arch-meson "$pkgname-$pkgver" build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}

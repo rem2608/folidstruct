@@ -1,0 +1,8 @@
+#!@PYTHON@
+import sys
+
+sys.path.insert(1, "@PKGDATADIR@")
+
+from folidstruct.__main__ import main  # noqa: E402
+
+sys.exit(main())
