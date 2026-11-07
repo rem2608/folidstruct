@@ -157,6 +157,11 @@ python3 -m unittest -v     # run the tests
 2. Commit, then tag and push: `git tag v1.2.3 && git push --tags`.
    GitHub Actions builds the `.deb` and publishes the release.
 
+## Credits
+
+FolidStruct was designed by [rem2608](https://github.com/rem2608) and
+developed with the help of [Claude](https://claude.ai) (Anthropic).
+
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).
