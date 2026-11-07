@@ -52,7 +52,10 @@ test('unit tests', python,
   workdir: meson.project_source_root(),
 )
 
+# Refresh caches on direct installs; skipped when the tools are missing,
+# as in package builds, where the distribution's triggers take care of it.
 gnome.post_install(
-  gtk_update_icon_cache: true,
-  update_desktop_database: true,
+  gtk_update_icon_cache: find_program('gtk4-update-icon-cache', 'gtk-update-icon-cache',
+                                      required: false).found(),
+  update_desktop_database: find_program('update-desktop-database', required: false).found(),
 )
