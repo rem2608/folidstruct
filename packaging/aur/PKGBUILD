@@ -14,7 +14,7 @@ optdepends=('python-nautilus: GNOME Files context menu'
             'python-caja: Caja context menu'
             'dolphin: Dolphin context menu')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')  # replaced by scripts/update-aur.sh when releasing
+sha256sums=('SKIP')  # run updpkgsums before publishing
 
 build() {
   arch-meson "$pkgname-$pkgver" build

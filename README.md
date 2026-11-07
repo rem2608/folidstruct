@@ -86,14 +86,6 @@ and open it, or:
 sudo apt install ./folidstruct_*.deb
 ```
 
-### Arch Linux
-
-From the AUR:
-
-```bash
-yay -S folidstruct
-```
-
 ### Any distribution, current user only
 
 No root needed; everything goes under `~/.local`:
@@ -154,7 +146,9 @@ python3 -m unittest -v     # run the tests
 - `extensions/folidstruct_menu.py` — context menu for Nautilus, Nemo and Caja
   (they share the same Python extension API).
 - `data/` — desktop entry, icons, AppStream metadata, Dolphin service menu.
-- `debian/`, `packaging/aur/` — distribution packages.
+- `debian/` — Debian/Ubuntu package, built by GitHub Actions on release.
+- `packaging/aur/PKGBUILD` — an unpublished starting point for an Arch
+  package; anyone is welcome to maintain it on the AUR.
 
 ### Releasing
 
@@ -162,8 +156,6 @@ python3 -m unittest -v     # run the tests
    release notes in `debian/changelog` and the metainfo file.
 2. Commit, then tag and push: `git tag v1.2.3 && git push --tags`.
    GitHub Actions builds the `.deb` and publishes the release.
-3. On Arch, run `scripts/update-aur.sh` and push `PKGBUILD` and `.SRCINFO`
-   to the AUR.
 
 ## License
 
