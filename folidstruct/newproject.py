@@ -8,7 +8,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio, Gtk  # noqa: E402
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from . import core  # noqa: E402
 from .i18n import _  # noqa: E402
@@ -30,8 +30,9 @@ class NewProjectWindow(Adw.ApplicationWindow):
         self.config = config
         self.template = template
         self.parent_dir = parent_dir
-        self.counter = core.read_counter()
+        self.counter = 1
         self.today = datetime.date.today()
+        self.field_rows = {}  # block index -> row
 
         cancel = Gtk.Button(label=_("Cancel"))
         cancel.connect("clicked", lambda *_a: self.close())
@@ -56,10 +57,12 @@ class NewProjectWindow(Adw.ApplicationWindow):
         name_group.add(self.template_row)
         name_group.add(self.name_row)
 
+        # Fields and choices of the name format, rebuilt for each template
+        self.fields_group = Adw.PreferencesGroup(title=_("Details"))
+
         # Options
-        self.date_row = Adw.SwitchRow(title=_("Date prefix"), subtitle=self.today.isoformat())
-        self.counter_row = Adw.SwitchRow(title=_("Progressive number"),
-                                         subtitle=f"{self.counter}{core.COUNTER_SUFFIX}")
+        self.date_row = Adw.SwitchRow(title=_("Date"), subtitle=self.today.isoformat())
+        self.counter_row = Adw.SwitchRow(title=_("Progressive number"))
         self.date_row.connect("notify::active", self._update)
         self.counter_row.connect("notify::active", self._update)
         options_group = Adw.PreferencesGroup(title=_("Options"))
@@ -78,7 +81,7 @@ class NewProjectWindow(Adw.ApplicationWindow):
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18,
                       margin_top=12, margin_bottom=18, margin_start=18, margin_end=18)
-        for group in (name_group, options_group, result_group):
+        for group in (name_group, self.fields_group, options_group, result_group):
             box.append(group)
 
         self.toasts = Adw.ToastOverlay(child=box)
@@ -98,44 +101,92 @@ class NewProjectWindow(Adw.ApplicationWindow):
 
     def _on_template_changed(self, *_args):
         self.template = self.config.templates[self.template_row.get_selected()]
-        use_date, use_counter = self.config.options_for(self.template)
-        self.date_row.set_active(use_date)
-        self.counter_row.set_active(use_counter)
+        self.format = self.config.format_for(self.template)
+        self.date_row.set_active(self.format.block(core.DATE).enabled)
+        self.counter_row.set_active(self.format.block(core.COUNTER).enabled)
+        self._refresh_counter()
         self.subfolders_row.set_subtitle(", ".join(self.template.folders) or _("No subfolders"))
+        self._rebuild_fields()
         self._update()
+
+    def _refresh_counter(self):
+        self.counter = core.read_counter(self.template)
+        self.counter_row.set_subtitle(f"{self.counter}{core.COUNTER_SUFFIX}")
+
+    def _rebuild_fields(self):
+        for row in self.field_rows.values():
+            self.fields_group.remove(row)
+        self.field_rows = {}
+        for index, block in enumerate(self.format.blocks):
+            if block.kind == core.FIELD:
+                row = Adw.EntryRow(title=block.label, text=block.value)
+                row.connect("changed", self._update)
+                row.connect("entry-activated", self._on_create)
+            elif block.kind == core.CHOICE:
+                # The first entry leaves the block out of the name.
+                options = ["—", *block.options]
+                selected = options.index(block.value) if block.value in options else 0
+                row = Adw.ComboRow(title=block.label, model=Gtk.StringList.new(options),
+                                   selected=selected)
+                row.connect("notify::selected", self._update)
+            else:
+                continue
+            self.fields_group.add(row)
+            self.field_rows[index] = row
+        self.fields_group.set_visible(bool(self.field_rows))
+
+    def _values(self):
+        values = {}
+        for index, row in self.field_rows.items():
+            if isinstance(row, Adw.ComboRow):
+                selected = row.get_selected()
+                values[index] = self.format.blocks[index].options[selected - 1] if selected else ""
+            else:
+                values[index] = row.get_text()
+        return values
 
     def _folder_name(self):
         return core.build_project_name(
+            self.format,
             self.name_row.get_text() or _("Project"),
-            self.today if self.date_row.get_active() else None,
-            self.counter if self.counter_row.get_active() else None,
+            date=self.today if self.date_row.get_active() else None,
+            counter=self.counter if self.counter_row.get_active() else None,
+            values=self._values(),
         )
 
     def _update(self, *_args):
         text = self.name_row.get_text()
-        error = core.validate_name(text) if text else None
-        if error:
-            self.name_row.add_css_class("error")
-        else:
-            self.name_row.remove_css_class("error")
-        self.create_button.set_sensitive(bool(text.strip()) and not error)
-        self.result_row.set_subtitle(self._folder_name())
+        valid = bool(text.strip())
+        for row in (self.name_row, *self.field_rows.values()):
+            if isinstance(row, Adw.ComboRow):
+                continue
+            value = row.get_text()
+            error = value and core.validate_name(value)
+            if error:
+                row.add_css_class("error")
+                valid = False
+            else:
+                row.remove_css_class("error")
+        folder_name = self._folder_name()
+        valid = valid and not core.validate_name(folder_name)
+        self.create_button.set_sensitive(valid)
+        self.result_row.set_subtitle(GLib.markup_escape_text(folder_name))
 
     def _on_create(self, *_args):
         if not self.create_button.get_sensitive():
             return
         try:
             core.create_project(
-                self.parent_dir, self.template, self.name_row.get_text(),
+                self.parent_dir, self.template, self.name_row.get_text(), self.format,
                 use_date=self.date_row.get_active(),
                 use_counter=self.counter_row.get_active(),
+                values=self._values(),
                 today=self.today,
             )
         except core.AppError as error:
             self.toasts.add_toast(Adw.Toast(title=str(error), timeout=5))
             # Another FolidStruct window may have used the number meanwhile.
-            self.counter = core.read_counter()
-            self.counter_row.set_subtitle(f"{self.counter}{core.COUNTER_SUFFIX}")
+            self._refresh_counter()
             self._update()
             return
         self.close()

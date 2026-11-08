@@ -49,7 +49,6 @@ TRANSLATIONS = {
         "Create": "Crea",
         "Project name": "Nome del progetto",
         "Options": "Opzioni",
-        "Date prefix": "Data come prefisso",
         "Progressive number": "Numero progressivo",
         "Result": "Risultato",
         "Folder": "Cartella",
@@ -80,10 +79,44 @@ TRANSLATIONS = {
         "About FolidStruct": "Informazioni su FolidStruct",
         "Project folder name": "Nome della cartella del progetto",
         "Custom options": "Opzioni personalizzate",
-        "Use these options instead of the global ones": "Usa queste opzioni invece di quelle globali",
-        "Default options, can be changed each time a project is created":
-            "Opzioni predefinite, modificabili ogni volta che si crea un progetto",
         "Next number": "Prossimo numero",
+        # Name format
+        "Use this name format instead of the global one":
+            "Usa questo formato del nome invece di quello globale",
+        "Used by every template without custom options. Date and number can also be "
+        "switched on or off when creating a project.":
+            "Usato da tutti i modelli senza opzioni personalizzate. Data e numero si "
+            "possono anche attivare o disattivare quando si crea un progetto.",
+        "Each template counts on its own": "Ogni modello ha la sua numerazione",
+        "Separator": "Separatore",
+        "Space": "Spazio",
+        "Underscore (_)": "Trattino basso (_)",
+        "Hyphen (-)": "Trattino (-)",
+        "Spaced hyphen ( - )": "Trattino con spazi ( - )",
+        "Date": "Data",
+        "Fixed text": "Testo fisso",
+        "Field to fill in": "Campo da compilare",
+        "Choice from a list": "Scelta da elenco",
+        "Add block": "Aggiungi blocco",
+        "Fixed text, field to fill in or choice": "Testo fisso, campo da compilare o scelta",
+        "Included by default": "Incluso in modo predefinito",
+        "Typed when creating the project": "Scritto quando si crea il progetto",
+        "default: {value}": "predefinito: {value}",
+        "Edit": "Modifica",
+        "Save": "Salva",
+        "Text": "Testo",
+        "Label, e.g. Client": "Etichetta, es. Cliente",
+        "Values, separated by commas": "Valori, separati da virgole",
+        "Default value (optional)": "Valore predefinito (facoltativo)",
+        "Always added to the name, e.g. a studio or language code.":
+            "Aggiunto sempre al nome, ad esempio la sigla dello studio o della lingua.",
+        "Asked when creating the project; left empty, it is skipped.":
+            "Chiesto quando si crea il progetto; se resta vuoto viene saltato.",
+        "Picked from a menu when creating the project, so names stay consistent; "
+        "it can also be left empty.":
+            "Scelto da un menù quando si crea il progetto, così i nomi restano uniformi; "
+            "si può anche lasciare vuoto.",
+        "Details": "Dettagli",
         "Language": "Lingua",
         "Automatic": "Automatica",
         "“Automatic” uses the system language": "“Automatica” usa la lingua del sistema",

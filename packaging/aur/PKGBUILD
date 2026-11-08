@@ -1,6 +1,6 @@
 # Maintainer: rem2608 <m_ricchi@ikmail.com>
 pkgname=folidstruct
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc="Create project folder structures from templates, from your file manager's context menu"
 arch=('any')

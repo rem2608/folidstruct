@@ -38,9 +38,10 @@ def main(argv=None):
             template = config.find_template(args.new)
             if template is None:
                 raise core.AppError(f"template not found: {args.new!r}")
-            use_date, use_counter = config.options_for(template)
-            path = core.create_project(Path(args.dir), template, args.name,
-                                       use_date, use_counter)
+            fmt = config.format_for(template)
+            path = core.create_project(Path(args.dir), template, args.name, fmt,
+                                       use_date=fmt.block(core.DATE).enabled,
+                                       use_counter=fmt.block(core.COUNTER).enabled)
         except core.AppError as error:
             print(f"{core.COMMAND}: {error}", file=sys.stderr)
             return 1

@@ -79,6 +79,16 @@
   </branding>
 
   <releases>
+    <release version="0.2.0" date="2026-11-08">
+      <description>
+        <p>A fully customizable project folder name:</p>
+        <ul>
+          <li>Add fixed text, fields to fill in and choices from a list</li>
+          <li>Reorder all the blocks and pick the separator</li>
+          <li>Each template has its own progressive number</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-11-07">
       <description>
         <p>First release.</p>

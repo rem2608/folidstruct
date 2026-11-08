@@ -1,7 +1,5 @@
 """The main window: create and edit templates, set the global options."""
 
-import datetime
-
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -9,6 +7,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk, Pango  # noqa: E402
 
 from . import core, i18n  # noqa: E402
+from .formateditor import FormatEditor  # noqa: E402
 from .i18n import _  # noqa: E402
 from .ui import show_error  # noqa: E402
 
@@ -53,23 +52,28 @@ class TemplateEditor(Adw.PreferencesPage):
         group.add(self.name_row)
         self.add(group)
 
-        # Per-template options
+        # Project folder name: this template's counter and optional format
+        self.next_row = Adw.SpinRow.new_with_range(1, 999999, 1)
+        self.next_row.set_title(_("Next number"))
+        self.next_row.set_subtitle(_("Each template counts on its own"))
+        self.next_row.set_value(core.read_counter(template))
+        self.next_row.connect("notify::value", self._on_counter_changed)
+
         self.options_row = Adw.ExpanderRow(
             title=_("Custom options"),
-            subtitle=_("Use these options instead of the global ones"),
+            subtitle=_("Use this name format instead of the global one"),
             show_enable_switch=True,
-            enable_expansion=template.custom_options,
-            expanded=template.custom_options,
+            enable_expansion=template.custom_format,
+            expanded=template.custom_format,
         )
-        self.date_row = Adw.SwitchRow(title=_("Date prefix"), active=template.use_date)
-        self.counter_row = Adw.SwitchRow(title=_("Progressive number"),
-                                         active=template.use_counter)
-        self.options_row.add_row(self.date_row)
-        self.options_row.add_row(self.counter_row)
-        self.options_row.connect("notify::enable-expansion", self._on_options_changed)
-        self.date_row.connect("notify::active", self._on_options_changed)
-        self.counter_row.connect("notify::active", self._on_options_changed)
+        self.options_row.connect("notify::enable-expansion", self._on_custom_toggled)
+        self.format_editor = FormatEditor(
+            template.format, self.options_row.add_row, self.options_row.remove,
+            on_change=window.save, parent=self,
+            counter=lambda: core.read_counter(self.template))
+
         group = Adw.PreferencesGroup(title=_("Project folder name"))
+        group.add(self.next_row)
         group.add(self.options_row)
         self.add(group)
 
@@ -97,12 +101,17 @@ class TemplateEditor(Adw.PreferencesPage):
             self.window.on_template_renamed(self.template)
             self.window.save()
 
-    # Options
+    # Project folder name
 
-    def _on_options_changed(self, *_args):
-        self.template.custom_options = self.options_row.get_enable_expansion()
-        self.template.use_date = self.date_row.get_active()
-        self.template.use_counter = self.counter_row.get_active()
+    def _on_counter_changed(self, *_args):
+        try:
+            core.write_counter(self.template, int(self.next_row.get_value()))
+        except core.AppError as error:
+            self.window.toasts.add_toast(Adw.Toast(title=str(error)))
+        self.format_editor.refresh()
+
+    def _on_custom_toggled(self, *_args):
+        self.template.custom_format = self.options_row.get_enable_expansion()
         self.window.save()
 
     # Folders
@@ -256,7 +265,7 @@ class ManagerWindow(Adw.ApplicationWindow):
 
     def _on_new_template(self, *_args):
         names = [t.name for t in self.config.templates]
-        template = core.Template(_unique(_("New template"), names))
+        template = core.new_template(self.config, _unique(_("New template"), names))
         self.config.templates.append(template)
         self.save()
         self._rebuild_list(select=template)
@@ -280,6 +289,7 @@ class ManagerWindow(Adw.ApplicationWindow):
             if response == "delete":
                 self.config.templates.remove(template)
                 self.save()
+                core.forget_counter(template)
                 self._rebuild_list()
 
         dialog.connect("response", on_response)
@@ -292,25 +302,6 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self.window = window
         config = window.config
 
-        self.date_row = Adw.SwitchRow(title=_("Date prefix"), active=config.use_date)
-        self.counter_row = Adw.SwitchRow(title=_("Progressive number"),
-                                         active=config.use_counter)
-        self.next_row = Adw.SpinRow.new_with_range(1, 999999, 1)
-        self.next_row.set_title(_("Next number"))
-        self.next_row.set_value(core.read_counter())
-        self.example_row = Adw.ActionRow(title=_("Example"), css_classes=["property"])
-
-        self.date_row.connect("notify::active", self._on_changed)
-        self.counter_row.connect("notify::active", self._on_changed)
-        self.next_row.connect("notify::value", self._on_counter_changed)
-
-        group = Adw.PreferencesGroup(
-            title=_("Project folder name"),
-            description=_("Default options, can be changed each time a project is created"),
-        )
-        for row in (self.date_row, self.counter_row, self.next_row, self.example_row):
-            group.add(row)
-
         labels = [_("Automatic")] + list(i18n.LANGUAGE_NAMES.values())
         choice = config.language if config.language in LANGUAGE_CHOICES else i18n.AUTO
         self.language_row = Adw.ComboRow(
@@ -320,31 +311,18 @@ class PreferencesDialog(Adw.PreferencesDialog):
         language_group = Adw.PreferencesGroup()
         language_group.add(self.language_row)
 
+        format_group = Adw.PreferencesGroup(
+            title=_("Project folder name"),
+            description=_("Used by every template without custom options. Date and number "
+                          "can also be switched on or off when creating a project."),
+        )
+        self.format_editor = FormatEditor(config.format, format_group.add, format_group.remove,
+                                          on_change=window.save, parent=self)
+
         page = Adw.PreferencesPage()
         page.add(language_group)
-        page.add(group)
+        page.add(format_group)
         self.add(page)
-        self._update_example()
-
-    def _update_example(self):
-        self.example_row.set_subtitle(core.build_project_name(
-            _("Project"),
-            datetime.date.today() if self.date_row.get_active() else None,
-            int(self.next_row.get_value()) if self.counter_row.get_active() else None,
-        ))
-
-    def _on_changed(self, *_args):
-        self.window.config.use_date = self.date_row.get_active()
-        self.window.config.use_counter = self.counter_row.get_active()
-        self.window.save()
-        self._update_example()
-
-    def _on_counter_changed(self, *_args):
-        try:
-            core.write_counter(int(self.next_row.get_value()))
-        except core.AppError as error:
-            self.add_toast(Adw.Toast(title=str(error)))
-        self._update_example()
 
     def _on_language_changed(self, *_args):
         config = self.window.config

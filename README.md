@@ -18,7 +18,7 @@ Define a template once — say *Graphics* with `Fonts`, `Images`, `Drafts`,
 project name and get:
 
 ```
-2026-11-07 22# Rossi logo/
+2026-11-07 22# Rossi New brand Logo/
 ├── Fonts/
 ├── Images/
 ├── Drafts/
@@ -30,11 +30,17 @@ Every project gets the same folder names, so your archive stays consistent.
 ## Features
 
 - Any number of templates, each with its own list of folders.
-- Optional prefixes for the project folder name:
-  - **date** in ISO format (`2026-11-07`), on by default;
-  - **progressive number** followed by `#` (`22#`), shared by all templates.
-- Options at three levels:
-  1. **global** defaults, in Preferences;
+- A project folder name built from blocks you can reorder:
+  - **date** in ISO format (`2026-11-07`);
+  - **progressive number** followed by `#` (`22#`), counted separately for
+    each template;
+  - the **project name**;
+  - your own blocks: **fixed text** (e.g. a studio code), **fields** to fill
+    in (e.g. *Client*) and **choices** from a list (e.g. *Type: Logo,
+    Brochure, Web*), so names stay consistent. Empty blocks are skipped.
+- Blocks joined by a space, `_`, `-` or ` - `.
+- Settings at three levels:
+  1. **global** name format, in Preferences;
   2. **per template**, by enabling *Custom options*;
   3. **per project**, in the dialog shown when creating it.
 - Existing folders are never overwritten or merged.
@@ -131,7 +137,8 @@ folidstruct --new Graphics --dir ~/Work              # ask for the name, then cr
 folidstruct --new Graphics --name "Logo" --dir ~/Work  # create without asking
 ```
 
-Templates and options are stored in `~/.config/folidstruct/`.
+Templates and options are stored in `~/.config/folidstruct/`; the
+progressive numbers in `counters.json`, next to them.
 
 ## Development
 
