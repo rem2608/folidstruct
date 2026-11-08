@@ -77,6 +77,11 @@ labels follow the system language rather than the one chosen in FolidStruct.
 Other file managers (e.g. Thunar) are not supported yet, but FolidStruct can always
 be used from the command line.
 
+On the Ubuntu desktop the menu is not available: desktop icons are drawn by a
+GNOME Shell extension (Desktop Icons NG), not by GNOME Files, and it does not
+load file manager extensions. Right-click the desktop, choose **Show Desktop in
+Files** and use the menu there.
+
 ## Install
 
 If you previously installed FolidStruct with `install.sh`, run `./uninstall.sh`
