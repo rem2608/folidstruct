@@ -19,7 +19,8 @@ jobs:
           global-json-file: windows/global.json
 
       - name: Core tests
-        run: dotnet test --project windows/tests/FolidStruct.Core.Tests
+        working-directory: windows # global.json selects the test runner
+        run: dotnet test --project tests/FolidStruct.Core.Tests
 
       - name: Menu tests
         working-directory: windows/tests/ContextMenu
