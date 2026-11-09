@@ -3,6 +3,9 @@ name: Windows
 on:
   push:
     branches: [main, "claude/**"]
+    # A "windows-test-*" tag also publishes the packages as a pre-release,
+    # downloadable without a GitHub account.
+    tags: ["windows-test-*"]
     paths: ["windows/**", ".github/workflows/windows.yml"]
   pull_request:
     paths: ["windows/**", ".github/workflows/windows.yml"]
@@ -68,12 +71,41 @@ jobs:
       - name: Collect package
         shell: pwsh
         run: |
-          New-Item -ItemType Directory artifact | Out-Null
-          Copy-Item -Recurse windows/out/* artifact/
+          # The package, the Windows App SDK runtime for this platform only, and the script.
+          $arch = "${{ matrix.platform }}".ToLower()
+          $msix = Get-ChildItem windows/out -Recurse -Filter "FolidStruct.App_*.msix" | Select-Object -First 1
+          $runtime = Get-ChildItem windows/out -Recurse -Filter *.msix |
+            Where-Object { $_.FullName -match "\\Dependencies\\$arch\\" }
+          New-Item -ItemType Directory "artifact/Dependencies/$arch" -Force | Out-Null
+          Copy-Item $msix.FullName artifact/
+          Copy-Item $runtime.FullName "artifact/Dependencies/$arch/"
           Copy-Item windows/scripts/install-dev.ps1 artifact/
-          Get-ChildItem -Recurse artifact | Select-Object FullName, Length
+          Get-ChildItem -Recurse -File artifact | Select-Object FullName, Length
 
       - uses: actions/upload-artifact@v4
         with:
           name: FolidStruct-windows-${{ matrix.platform }}
           path: artifact/
+
+  # Pre-release for testing: tag "windows-test-N" and push the tag.
+  prerelease:
+    if: startsWith(github.ref, 'refs/tags/windows-test-')
+    needs: [test, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          for platform in x64 ARM64; do
+            (cd "FolidStruct-windows-$platform" && zip -r "../FolidStruct-windows-$platform.zip" .)
+          done
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease \
+            --title "Windows test build ($TAG)" \
+            --notes "Unsigned test build of the Windows version, for testing only. It needs Developer Mode (Settings > System > For developers). Download the zip for your PC (x64 for Intel/AMD, ARM64 for Snapdragon), unzip it, and in that folder run: powershell -ExecutionPolicy Bypass -File install-dev.ps1 - The final version will be published in the Microsoft Store." \
+            FolidStruct-windows-x64.zip FolidStruct-windows-ARM64.zip
