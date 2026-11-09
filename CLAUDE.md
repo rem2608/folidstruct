@@ -103,6 +103,7 @@ packaging/aur/PKGBUILD  base NON pubblicata per Arch (l'autore non vuole
 scripts/                set-version.sh, check-version.sh
 .github/workflows/      ci.yml (test a ogni push), release.yml (tag v* → .deb)
 tests/                  unittest (31 test)
+windows/                versione Windows (vedi sotto e windows/README.md)
 ```
 
 ### Configurazione (`~/.config/folidstruct/`)
@@ -138,6 +139,44 @@ tests/                  unittest (31 test)
   comportamenti diversi nel sistema; è documentata come eccezione nel
   README ("Show Desktop in Files").
 - Thunar: non supportato.
+
+## Versione Windows (in sviluppo, cartella `windows/`)
+
+Decisioni dell'autore (2026-11-09): **menù moderno di Windows 11** (non
+solo "Mostra altre opzioni") e distribuzione tramite **Microsoft Store**,
+che è anche una vetrina. L'autore ha un PC con Windows 11 per le prove.
+
+- **Perché lo Store**: il menù moderno richiede un pacchetto MSIX firmato.
+  Lo Store firma gratis (account sviluppatore gratuito per i privati dal
+  2025). Azure Artifact Signing non è disponibile per i privati in Italia
+  (solo USA/Canada); un certificato OV è a pagamento. Su GitHub restano
+  codice e link allo Store; si potrà aggiungere un MSIX firmato in futuro.
+- **Struttura**: `FolidStruct.Core` (C#, .NET 10, porting di core.py e
+  i18n.py, stesso formato di config.json/counters.json, gira anche su
+  Linux), `FolidStruct.App` (WinUI 3, Windows App SDK 1.8, MSIX con .NET
+  incluso), `FolidStruct.ContextMenu` (C++ con WRL, `IExplorerCommand`
+  registrato nel manifest per `Directory` e `Directory\Background`,
+  CLSID `8D25BF02-46D9-4D8F-987D-2E5F04A68DA2`, CRT statico).
+- **Configurazione**: nella cartella `LocalState` del pacchetto
+  (`%LOCALAPPDATA%\Packages\<famiglia>\LocalState`). Il menù la trova
+  dal nome della famiglia del pacchetto e apre l'app con
+  `IApplicationActivationManager` (`--new --template-id ID --dir DIR`),
+  così l'app ha l'identità del pacchetto. Il menù legge config.json con un
+  piccolo lettore JSON proprio (nessuna dipendenza).
+- **Nomi**: regole di Windows (`\ / : * ? " < > |`, CON/NUL/COM1…, niente
+  punto o spazio finale, doppioni senza distinguere maiuscole).
+- **Compilazione**: qui (Linux) si compilano e provano solo Core e le parti
+  portabili del menù; app e DLL si compilano con GitHub Actions
+  (`.github/workflows/windows.yml`, x64 e ARM64), che controlla anche il
+  contenuto del pacchetto e salva gli artifact. I pacchetti non firmati si
+  provano con `windows/scripts/install-dev.ps1` (Modalità sviluppatore).
+- **Identità del pacchetto** (`Package.appxmanifest`): `Name` e
+  `Publisher` sono provvisori; vanno sostituiti con quelli di Partner
+  Center dopo aver riservato il nome "FolidStruct".
+- `scripts/set-version.sh` e `check-version.sh` aggiornano/controllano
+  anche `windows/src/FolidStruct.Core/Config.cs` (AppInfo.Version) e il
+  manifest MSIX (`X.Y.Z.0`).
+- Icone MSIX e .ico generate dallo SVG con `windows/scripts/make-assets.py`.
 
 ## Icona
 
@@ -208,10 +247,7 @@ meson setup build && meson test -C build
   quindi le cartelle le crea l'app principale), distribuita come `.dmg`
   firmato e notarizzato; codice in una cartella `macos/` con lo stesso
   formato dei modelli. Va sviluppata su un Mac con Xcode.
-- **Windows**: menù di Esplora file tramite registro (voci fisse da
-  rigenerare quando cambiano i modelli; su Windows 11 sotto "Mostra altre
-  opzioni"), validazione dei nomi più severa (`<>:"\|?*`, CON, NUL…),
-  lock diverso da `fcntl`.
+- **Windows**: in sviluppo, vedi la sezione "Versione Windows".
 - Possibili migliorie: ripristino della configurazione se danneggiata,
   supporto a Thunar.
 - Già valutato: l'idea è diffusa (es. PowerToys New+ di Microsoft,
