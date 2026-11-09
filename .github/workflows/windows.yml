@@ -47,6 +47,24 @@ jobs:
         shell: pwsh
         run: windows/build.ps1 -Platform ${{ matrix.platform }}
 
+      - name: Check package
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $msix = Get-ChildItem windows/out -Recurse -Filter "FolidStruct.App_*.msix" | Select-Object -First 1
+          $zip = [IO.Compression.ZipFile]::OpenRead($msix.FullName)
+          $names = $zip.Entries.FullName
+          foreach ($file in "FolidStruct.exe", "FolidStruct.Core.dll", "FolidStruct.ContextMenu.dll",
+                            "Assets/FolidStruct.ico", "AppxManifest.xml", "resources.pri") {
+            if ($names -notcontains $file) { throw "Missing from the package: $file" }
+          }
+          $entry = $zip.GetEntry("AppxManifest.xml")
+          $manifest = [IO.StreamReader]::new($entry.Open()).ReadToEnd()
+          $zip.Dispose()
+          Write-Host $manifest
+          if ($manifest -notmatch "windows.fileExplorerContextMenus") { throw "Menu not registered" }
+          "{0}: {1:N1} MB, {2} files" -f $msix.Name, ($msix.Length / 1MB), $names.Count
+
       - name: Collect package
         shell: pwsh
         run: |
