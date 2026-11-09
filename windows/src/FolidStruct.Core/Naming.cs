@@ -51,6 +51,20 @@ public static class Naming
     public static string CollapseSpaces(string text) =>
         string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
+    /// <summary>
+    /// <paramref name="name"/>, or "name 2", "name 3"… if it is already taken, e.g. for
+    /// "New template" or "New folder".
+    /// </summary>
+    public static string UniqueName(string name, IEnumerable<string> existing, bool ignoreCase = false)
+    {
+        var taken = new HashSet<string>(existing, ignoreCase ? StringComparer.OrdinalIgnoreCase
+                                                              : StringComparer.Ordinal);
+        var (result, n) = (name, 2);
+        while (taken.Contains(result))
+            result = $"{name} {n++}";
+        return result;
+    }
+
     /// <summary>A sample name for previews; fields without a default show their label.</summary>
     public static string ExampleName(NameFormat format, DateOnly? today = null, int counter = 1)
     {

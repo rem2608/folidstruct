@@ -47,6 +47,10 @@ internal static class Ui
         return button;
     }
 
+    /// <summary>A switch without the "On"/"Off" text, which follows the system language.</summary>
+    public static ToggleSwitch Toggle(bool isOn = false) =>
+        new() { IsOn = isOn, OnContent = "", OffContent = "", MinWidth = 0 };
+
     public static TextBlock PageTitle(string text) => new()
     {
         Text = text,

@@ -102,11 +102,12 @@ class NewProjectWindow(Adw.ApplicationWindow):
     def _on_template_changed(self, *_args):
         self.template = self.config.templates[self.template_row.get_selected()]
         self.format = self.config.format_for(self.template)
+        # Fields and counter first: toggling the switches updates the preview.
+        self._rebuild_fields()
+        self._refresh_counter()
         self.date_row.set_active(self.format.block(core.DATE).enabled)
         self.counter_row.set_active(self.format.block(core.COUNTER).enabled)
-        self._refresh_counter()
         self.subfolders_row.set_subtitle(", ".join(self.template.folders) or _("No subfolders"))
-        self._rebuild_fields()
         self._update()
 
     def _refresh_counter(self):

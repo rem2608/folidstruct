@@ -18,6 +18,16 @@ internal static partial class Native
         SetForegroundWindow(hwnd);
     }
 
+    /// <summary>The display scale of a window (1.0 at 96 DPI, 2.0 at 200%).</summary>
+    public static double ScaleFactor(IntPtr hwnd)
+    {
+        var dpi = GetDpiForWindow(hwnd);
+        return dpi > 0 ? dpi / 96.0 : 1.0;
+    }
+
+    [LibraryImport("user32.dll")]
+    private static partial uint GetDpiForWindow(IntPtr hwnd);
+
     [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16)]
     private static partial int MessageBox(IntPtr hwnd, string text, string caption, uint type);
 

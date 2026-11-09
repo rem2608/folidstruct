@@ -134,6 +134,15 @@ public class NamingTests : TempDirTest
     }
 
     [Fact]
+    public void UniqueName()
+    {
+        Assert.Equal("New", Naming.UniqueName("New", ["Other"]));
+        Assert.Equal("New 3", Naming.UniqueName("New", ["New", "New 2"]));
+        Assert.Equal("New", Naming.UniqueName("New", ["new"]));
+        Assert.Equal("New 2", Naming.UniqueName("New", ["new"], ignoreCase: true));
+    }
+
+    [Fact]
     public void Translated()
     {
         I18n.SetLanguage("it");

@@ -17,8 +17,6 @@
 #include <wrl/implements.h>
 #include <wrl/module.h>
 
-#include <fstream>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -57,15 +55,28 @@ namespace
         return path.substr(0, path.find_last_of(L'\\'));
     }
 
-    std::string ReadFile(const std::wstring& path, size_t limit)
+    // Read a whole file, sharing it fully so that FolidStruct can replace it
+    // while the menu reads it.
+    std::string ReadWholeFile(const std::wstring& path, DWORD limit)
     {
-        std::ifstream file(path, std::ios::binary);
-        if (!file)
+        if (path.empty())
             return {};
-        std::ostringstream content;
-        content << file.rdbuf();
-        std::string text = content.str();
-        return text.size() <= limit ? text : std::string();
+        HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE)
+            return {};
+        std::string text;
+        LARGE_INTEGER size = {};
+        if (GetFileSizeEx(file, &size) && size.QuadPart > 0 && size.QuadPart <= limit)
+        {
+            text.resize(static_cast<size_t>(size.QuadPart));
+            DWORD read = 0;
+            if (!::ReadFile(file, text.data(), static_cast<DWORD>(text.size()), &read, nullptr))
+                read = 0;
+            text.resize(read);
+        }
+        CloseHandle(file);
+        return text;
     }
 
     std::wstring FromUtf8(const std::string& text)
@@ -119,7 +130,8 @@ namespace
         }
 
         // …otherwise work it out from the manifest next to this DLL.
-        const std::wstring manifest = FromUtf8(ReadFile(ModuleDirectory() + L"\\AppxManifest.xml", 1 << 20));
+        const std::wstring manifestPath = ModuleDirectory() + L"\\AppxManifest.xml";
+        const std::wstring manifest = FromUtf8(ReadWholeFile(manifestPath, 1 << 20));
         const size_t start = manifest.find(L"<Identity");
         const size_t end = manifest.find(L'>', start);
         if (start == std::wstring::npos || end == std::wstring::npos)
@@ -186,7 +198,7 @@ namespace
         config.language = SystemLanguage();
 
         json::Value root;
-        if (!json::Parse(FromUtf8(ReadFile(ConfigPath(config.family), 16 << 20)), root))
+        if (!json::Parse(FromUtf8(ReadWholeFile(ConfigPath(config.family), 16 << 20)), root))
             return config;
 
         // The language chosen in FolidStruct, or the system language ("auto").
@@ -267,8 +279,10 @@ namespace
     class SubCommand final : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IExplorerCommand>
     {
     public:
-        SubCommand(Action action, std::wstring title, std::wstring templateId, std::wstring family)
-            : action(action), title(std::move(title)), templateId(std::move(templateId)), family(std::move(family))
+        SubCommand(Action action, std::wstring title, std::wstring templateId, std::wstring templateName,
+                   std::wstring family)
+            : action(action), title(std::move(title)), templateId(std::move(templateId)),
+              templateName(std::move(templateName)), family(std::move(family))
         {
         }
 
@@ -311,9 +325,12 @@ namespace
             const std::wstring folder = FolderPath(items);
             if (folder.empty())
                 return E_INVALIDARG;
+            // By id; by name for a configuration the app has not upgraded yet.
             std::wstring arguments = L"--new";
             if (!templateId.empty())
                 arguments += L" --template-id " + QuoteArg(templateId);
+            else if (!templateName.empty())
+                arguments += L" " + QuoteArg(templateName);
             arguments += L" --dir " + QuoteArg(folder);
             return LaunchApp(family, arguments);
         }
@@ -334,6 +351,7 @@ namespace
         Action action;
         std::wstring title;
         std::wstring templateId;
+        std::wstring templateName;
         std::wstring family;
     };
 
@@ -428,16 +446,17 @@ public:
         const MenuConfig config = LoadConfig();
         std::vector<ComPtr<IExplorerCommand>> commands;
         for (const auto& entry : config.templates)
-            commands.push_back(Make<SubCommand>(Action::NewProject, entry.name, entry.id, config.family));
+            commands.push_back(Make<SubCommand>(Action::NewProject, entry.name, entry.id, entry.name,
+                                                config.family));
         if (commands.empty())
         {
             // First use, before FolidStruct has saved its templates: the app
             // writes the default ones and opens with the first template.
-            commands.push_back(Make<SubCommand>(Action::NewProject, Label(config, L"New project…"), L"",
+            commands.push_back(Make<SubCommand>(Action::NewProject, Label(config, L"New project…"), L"", L"",
                                                 config.family));
         }
-        commands.push_back(Make<SubCommand>(Action::Separator, L"", L"", config.family));
-        commands.push_back(Make<SubCommand>(Action::Manage, Label(config, L"Manage templates…"), L"",
+        commands.push_back(Make<SubCommand>(Action::Separator, L"", L"", L"", config.family));
+        commands.push_back(Make<SubCommand>(Action::Manage, Label(config, L"Manage templates…"), L"", L"",
                                             config.family));
         auto list = Make<CommandList>(std::move(commands));
         return list ? list.CopyTo(result) : E_OUTOFMEMORY;

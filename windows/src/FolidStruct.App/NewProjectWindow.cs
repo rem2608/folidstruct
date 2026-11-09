@@ -32,8 +32,8 @@ internal sealed class NewProjectWindow : Window
     private readonly TextBlock detailsTitle;
     private readonly StackPanel detailsPanel = new();
     private readonly Dictionary<int, (Card Card, Control Input)> fields = [];
-    private readonly ToggleSwitch dateSwitch = Switch();
-    private readonly ToggleSwitch counterSwitch = Switch();
+    private readonly ToggleSwitch dateSwitch = Ui.Toggle();
+    private readonly ToggleSwitch counterSwitch = Ui.Toggle();
     private readonly Card counterCard;
     private readonly Card folderCard;
     private readonly Card subfoldersCard;
@@ -148,8 +148,6 @@ internal sealed class NewProjectWindow : Window
         OnTemplateChanged();
     }
 
-    private static ToggleSwitch Switch() => new() { OnContent = "", OffContent = "", MinWidth = 0 };
-
     private void OnEnter(object sender, KeyRoutedEventArgs e)
     {
         if (e.Key == VirtualKey.Enter)
@@ -165,12 +163,13 @@ internal sealed class NewProjectWindow : Window
             return;
         template = config.Templates[templateCombo.SelectedIndex];
         format = config.FormatFor(template);
+        // Fields and counter first: toggling the switches updates the preview.
+        RebuildFields();
+        RefreshCounter();
         dateSwitch.IsOn = format.Block(BlockKind.Date).Enabled;
         counterSwitch.IsOn = format.Block(BlockKind.Counter).Enabled;
-        RefreshCounter();
         subfoldersCard.SetDescription(template.Folders.Count > 0 ? string.Join(", ", template.Folders)
                                                                   : T("No subfolders"));
-        RebuildFields();
         Update();
         if (root.IsLoaded)
             FitToContent(center: false);

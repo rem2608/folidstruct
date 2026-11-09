@@ -79,7 +79,19 @@ public static class Storage
             writer.Flush();
             stream.Flush(flushToDisk: true); // never leave an empty file after a power loss
         }
-        File.Move(tmp, path, overwrite: true);
+        // The File Explorer menu may be reading the file at this very moment.
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(tmp, path, overwrite: true);
+                return;
+            }
+            catch (IOException) when (attempt < 5)
+            {
+                Thread.Sleep(20 * attempt);
+            }
+        }
     }
 
     private static void WriteJson(string path, JsonNode data) =>

@@ -113,7 +113,7 @@ internal sealed class FormatEditor
 
         if (block.Kind is BlockKind.Date or BlockKind.Counter)
         {
-            var toggle = new ToggleSwitch { IsOn = block.Enabled, OnContent = "", OffContent = "", MinWidth = 0 };
+            var toggle = Ui.Toggle(block.Enabled);
             ToolTipService.SetToolTip(toggle, T("Included by default"));
             toggle.Toggled += (_, _) =>
             {

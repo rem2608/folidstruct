@@ -26,7 +26,8 @@ internal sealed class ManagerWindow : Window
         ExtendsContentIntoTitleBar = true;
         SystemBackdrop = new MicaBackdrop();
         AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "FolidStruct.ico"));
-        AppWindow.Resize(new SizeInt32(1000, 720));
+        var scale = Native.ScaleFactor(WinRT.Interop.WindowNative.GetWindowHandle(this));
+        AppWindow.Resize(new SizeInt32((int)(1000 * scale), (int)(720 * scale)));
         Content = root;
         Build();
     }
@@ -151,6 +152,9 @@ internal sealed class ManagerWindow : Window
             Padding = new Thickness(36, 8, 36, 36),
             HorizontalAlignment = HorizontalAlignment.Stretch,
         };
+        // The error bar is shared by every page: take it off the previous one first.
+        if (infoBar.Parent is Panel previous)
+            previous.Children.Remove(infoBar);
         infoBar.IsOpen = false;
         content.Children.Add(infoBar);
         content.Children.Add(page);
@@ -237,17 +241,9 @@ internal sealed class ManagerWindow : Window
             item.Content = template.Name;
     }
 
-    private static string Unique(string name, ICollection<string> existing)
-    {
-        var (result, n) = (name, 2);
-        while (existing.Contains(result))
-            result = $"{name} {n++}";
-        return result;
-    }
-
     private void NewTemplate()
     {
-        var template = config.NewTemplate(Unique(T("New template"), config.Templates.Select(t => t.Name).ToList()));
+        var template = config.NewTemplate(Naming.UniqueName(T("New template"), config.Templates.Select(t => t.Name)));
         config.Templates.Add(template);
         Save();
         var item = TemplateItem(template);
@@ -439,7 +435,7 @@ internal sealed class TemplateEditor
         };
 
         formatEditor = new FormatEditor(template.Format, window.Save, () => Storage.ReadCounter(template));
-        var custom = new ToggleSwitch { IsOn = template.CustomFormat, OnContent = "", OffContent = "", MinWidth = 0 };
+        var custom = Ui.Toggle(template.CustomFormat);
         var expanderHeader = new Card(T("Custom options"), T("Use this name format instead of the global one"), custom);
         expanderHeader.Root.Background = null;
         expanderHeader.Root.BorderThickness = new Thickness(0);
@@ -580,11 +576,7 @@ internal sealed class TemplateEditor
 
     private void AddFolder()
     {
-        var name = T("New folder");
-        var (result, n) = (name, 2);
-        while (template.Folders.Contains(result, StringComparer.OrdinalIgnoreCase))
-            result = $"{name} {n++}";
-        template.Folders.Add(result);
+        template.Folders.Add(Naming.UniqueName(T("New folder"), template.Folders, ignoreCase: true));
         window.Save();
         RebuildFolders(focus: template.Folders.Count - 1);
     }
