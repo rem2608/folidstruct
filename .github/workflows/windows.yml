@@ -1,0 +1,60 @@
+name: Windows
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths: ["windows/**", ".github/workflows/windows.yml"]
+  pull_request:
+    paths: ["windows/**", ".github/workflows/windows.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: windows/global.json
+
+      - name: Core tests
+        run: dotnet test --project windows/tests/FolidStruct.Core.Tests
+
+      - name: Menu tests
+        working-directory: windows/tests/ContextMenu
+        run: |
+          g++ -std=c++20 -Wall -Wextra -Werror -fsanitize=address,undefined \
+            -I../../src/FolidStruct.ContextMenu MenuTests.cpp \
+            ../../src/FolidStruct.ContextMenu/Json.cpp -o menu-tests
+          ./menu-tests
+
+  build:
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x64, ARM64]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: windows/global.json
+
+      - name: Build
+        shell: pwsh
+        run: windows/build.ps1 -Platform ${{ matrix.platform }}
+
+      - name: Collect package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory artifact | Out-Null
+          Copy-Item -Recurse windows/out/* artifact/
+          Copy-Item windows/scripts/install-dev.ps1 artifact/
+          Get-ChildItem -Recurse artifact | Select-Object FullName, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FolidStruct-windows-${{ matrix.platform }}
+          path: artifact/

@@ -11,6 +11,10 @@ today=$(date +%F)
 sed -i "s/^  version: '.*',/  version: '$version',/" meson.build
 sed -i "s/^VERSION = \".*\"/VERSION = \"$version\"/" folidstruct/core.py
 sed -i "s/^pkgver=.*/pkgver=$version/; s/^pkgrel=.*/pkgrel=1/" packaging/aur/PKGBUILD
+sed -i "s/public const string Version = \".*\";/public const string Version = \"$version\";/" \
+    windows/src/FolidStruct.Core/Config.cs
+sed -i "s/^    Version=\"[0-9.]*\" \/>/    Version=\"$version.0\" \/>/" \
+    windows/src/FolidStruct.App/Package.appxmanifest
 
 if ! grep -q "<release version=\"$version\"" data/io.github.rem2608.FolidStruct.metainfo.xml; then
     sed -i "s|  <releases>|  <releases>\n    <release version=\"$version\" date=\"$today\"/>|" \
