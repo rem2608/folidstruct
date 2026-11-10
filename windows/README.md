@@ -20,6 +20,11 @@ testing only (see below).
 | `tests/` | Tests of the core (xUnit) and of the menu's JSON reader and argument quoting (plain C++). Both also run on Linux. |
 | `scripts/` | `make-assets.py` (icons from the SVG), `install-dev.ps1` (installs a test build). |
 
+Where the menu appears: on folders and on the background of a folder, in
+the Windows 11 menu. **Not on the desktop background**: Windows does not
+offer packaged menu handlers there. To create a project on the desktop,
+open *Desktop* in File Explorer and right-click its background.
+
 Differences from Linux:
 
 - The files live in the package's `LocalState` folder

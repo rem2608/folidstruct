@@ -174,7 +174,11 @@ che è anche una vetrina. L'autore ha un PC con Windows 11 per le prove.
   una cartella funziona anch'esso nel menù moderno. **Sfondo del desktop:
   Windows non chiama il componente** (il registro lo conferma): per i
   pacchetti `ItemType` ammette solo estensioni, `*`, `Directory` e
-  `Directory\Background`. Prima dell'avvio dell'app `config.json` non
+  `Directory\Background`. **Decisione dell'autore: nessuna soluzione
+  alternativa** (come per la scrivania di Ubuntu); documentata nel README
+  di Windows, con il consiglio di aprire Desktop in Esplora file. Da
+  ricontrollare se Windows renderà il menù personalizzabile dagli utenti.
+  Prima dell'avvio dell'app `config.json` non
   esiste (si cancella anche a ogni reinstallazione): il menù mostra il
   modello di esempio e lo passa per nome. Registro diagnostico in
   `%TEMP%\FolidStruct-menu.log` (da togliere o ridurre prima dello Store).
