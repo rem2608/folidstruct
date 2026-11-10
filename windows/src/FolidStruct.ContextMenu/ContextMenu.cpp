@@ -59,44 +59,6 @@ namespace
 
     // Read a whole file, sharing it fully so that FolidStruct can replace it
     // while the menu reads it.
-    std::string ToUtf8(const std::wstring& text)
-    {
-        if (text.empty())
-            return {};
-        const int length = WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0,
-                                               nullptr, nullptr);
-        std::string result(length, '\0');
-        WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), result.data(), length, nullptr,
-                            nullptr);
-        return result;
-    }
-
-    // Diagnostics: %TEMP%\FolidStruct-menu.log, one line per menu call, kept small.
-    void Log(const std::wstring& message)
-    {
-        wchar_t temp[MAX_PATH + 1] = {};
-        if (!GetTempPathW(MAX_PATH + 1, temp))
-            return;
-        const std::wstring path = std::wstring(temp) + L"FolidStruct-menu.log";
-        WIN32_FILE_ATTRIBUTE_DATA info = {};
-        const bool tooBig = GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &info)
-                            && (info.nFileSizeHigh > 0 || info.nFileSizeLow > 256 * 1024);
-        HANDLE file = CreateFileW(path.c_str(), tooBig ? GENERIC_WRITE : FILE_APPEND_DATA,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-                                  tooBig ? CREATE_ALWAYS : OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (file == INVALID_HANDLE_VALUE)
-            return;
-        SYSTEMTIME now = {};
-        GetLocalTime(&now);
-        wchar_t prefix[64] = {};
-        swprintf_s(prefix, L"%02u:%02u:%02u.%03u pid %lu: ", now.wHour, now.wMinute, now.wSecond,
-                   now.wMilliseconds, GetCurrentProcessId());
-        const std::string line = ToUtf8(prefix + message) + "\r\n";
-        DWORD written = 0;
-        WriteFile(file, line.data(), static_cast<DWORD>(line.size()), &written, nullptr);
-        CloseHandle(file);
-    }
-
     std::string ReadWholeFile(const std::wstring& path, DWORD limit)
     {
         if (path.empty())
@@ -257,7 +219,6 @@ namespace
         {
             // Not created yet (FolidStruct never opened since installation): show the
             // example template the app will write; it is found by name.
-            Log(L"menu: family '" + config.family + L"', no config at '" + path + L"', example template");
             if (!path.empty())
                 config.templates.push_back({L"", config.language == L"it" ? L"Grafica" : L"Graphics"});
             return config;
@@ -265,17 +226,12 @@ namespace
 
         json::Value root;
         bool parsed = false;
-        size_t size = 0;
         for (int attempt = 0; attempt < 3 && !parsed; ++attempt)
         {
             if (attempt > 0)
                 Sleep(50); // the app may be replacing the file
-            const std::string text = ReadWholeFile(path, 16 << 20);
-            size = text.size();
-            parsed = json::Parse(FromUtf8(text), root);
+            parsed = json::Parse(FromUtf8(ReadWholeFile(path, 16 << 20)), root);
         }
-        Log(L"menu: family '" + config.family + L"', config '" + path + L"', " + std::to_wstring(size)
-            + L" bytes, " + (parsed ? L"read" : L"NOT read"));
         if (!parsed)
             return config;
 
@@ -606,16 +562,7 @@ public:
 
     IFACEMETHODIMP GetState(IShellItemArray* items, BOOL, EXPCMDSTATE* state) override
     {
-        DWORD count = 0;
-        if (items)
-            items->GetCount(&count);
-        wchar_t foreground[64] = L"-";
-        if (HWND window = GetForegroundWindow())
-            GetClassNameW(GetAncestor(window, GA_ROOTOWNER), foreground, 64);
-        const std::wstring folder = FolderPath(items);
-        Log(L"state: " + std::to_wstring(count) + L" items, foreground '" + foreground + L"', folder '" + folder
-            + L"'");
-        *state = folder.empty() ? ECS_HIDDEN : ECS_ENABLED;
+        *state = FolderPath(items).empty() ? ECS_HIDDEN : ECS_ENABLED;
         return S_OK;
     }
 

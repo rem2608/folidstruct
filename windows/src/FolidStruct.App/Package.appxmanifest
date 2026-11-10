@@ -2,9 +2,8 @@
 <!--
   MSIX package of FolidStruct.
 
-  Identity Name and Publisher must match the values that Partner Center assigns
-  when the app name is reserved in the Microsoft Store (Product identity page);
-  until then they are placeholders for local testing.
+  Identity Name, Publisher and PublisherDisplayName are the values Partner
+  Center assigned to FolidStruct (Product management > Product identity).
 
   The File Explorer menu is a packaged COM server (FolidStruct.ContextMenu.dll)
   registered for folders and folder backgrounds: on Windows 11 it appears in the
@@ -20,13 +19,13 @@
   IgnorableNamespaces="uap rescap com desktop4 desktop5">
 
   <Identity
-    Name="rem2608.FolidStruct"
-    Publisher="CN=rem2608"
+    Name="Rem2608.FolidStruct"
+    Publisher="CN=E952455A-9E62-4603-B379-B8387CA08CA4"
     Version="0.2.0.0" />
 
   <Properties>
     <DisplayName>FolidStruct</DisplayName>
-    <PublisherDisplayName>rem2608</PublisherDisplayName>
+    <PublisherDisplayName>Rem2608</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
