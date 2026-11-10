@@ -90,6 +90,7 @@ if (Test-Path $certificate) {
     }
     $cert = [Security.Cryptography.X509Certificates.X509Certificate2]::new($certificate)
     Get-TestCertificates $cert.Subject | Where-Object { $_.Thumbprint -ne $cert.Thumbprint } | Remove-Item
+    Get-TestCertificates "CN=rem2608" | Remove-Item # test builds before the Store identity
     if (-not (Get-ChildItem $trustedPeople | Where-Object { $_.Thumbprint -eq $cert.Thumbprint })) {
         Import-Certificate -FilePath $certificate -CertStoreLocation $trustedPeople | Out-Null
         Write-Host "Test certificate trusted: $($cert.Subject), expires $($cert.NotAfter.ToShortDateString())"

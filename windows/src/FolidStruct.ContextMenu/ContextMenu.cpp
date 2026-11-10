@@ -147,7 +147,7 @@ namespace
         }
 
         // …or from the manifest next to this DLL (a package registered unpacked).
-        const std::wstring manifestPath = ModuleDirectory() + L"\\AppxManifest.xml";
+        const std::wstring manifestPath = directory + L"\\AppxManifest.xml";
         const std::wstring manifest = FromUtf8(ReadWholeFile(manifestPath, 1 << 20));
         const size_t start = manifest.find(L"<Identity");
         const size_t end = manifest.find(L'>', start);

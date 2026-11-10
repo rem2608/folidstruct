@@ -190,11 +190,15 @@ che è anche una vetrina. L'autore ha un PC con Windows 11 per le prove.
 - **Compilazione**: qui (Linux) si compilano e provano solo Core e le parti
   portabili del menù; app e DLL si compilano con GitHub Actions
   (`.github/workflows/windows.yml`, x64 e ARM64), che controlla anche il
-  contenuto del pacchetto e salva gli artifact. I pacchetti non firmati si
-  provano con `windows/scripts/install-dev.ps1` (Modalità sviluppatore).
-- **Identità del pacchetto** (`Package.appxmanifest`): `Name` e
-  `Publisher` sono provvisori; vanno sostituiti con quelli di Partner
-  Center dopo aver riservato il nome "FolidStruct".
+  contenuto del pacchetto, lo firma con il certificato di prova e salva
+  gli artifact; si installano con `windows/scripts/install-dev.ps1` (le
+  build locali non firmate richiedono la Modalità sviluppatore). Il flusso
+  ha permessi di sola lettura, tranne la pre-release (tag `windows-test-*`,
+  finora mai usata).
+- **Identità del pacchetto** (`Package.appxmanifest`), da Partner Center
+  (2026-11-10): `Rem2608.FolidStruct`, editore
+  `CN=E952455A-9E62-4603-B379-B8387CA08CA4`, nome visualizzato `Rem2608`.
+  Il certificato di prova ha lo stesso editore (deve coincidere).
 - `scripts/set-version.sh` e `check-version.sh` aggiornano/controllano
   anche `windows/src/FolidStruct.Core/Config.cs` (AppInfo.Version) e il
   manifest MSIX (`X.Y.Z.0`).

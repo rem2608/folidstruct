@@ -11,6 +11,10 @@ on:
     paths: ["windows/**", ".github/workflows/windows.yml"]
   workflow_dispatch:
 
+# Read-only by default; only the pre-release job may write.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-24.04
