@@ -57,6 +57,9 @@ internal sealed class NewProjectWindow : Window
             presenter.IsMaximizable = false;
             presenter.IsMinimizable = false;
         }
+        // Start off-screen: the size depends on the content, known only after the
+        // first layout (FitToContent then centres it). Avoids a visible jump.
+        AppWindow.Move(new PointInt32(-32000, -32000));
 
         // Template and name
         templateCombo = Ui.Combo(config.Templates.Select(t => t.Name), config.Templates.IndexOf(template));
