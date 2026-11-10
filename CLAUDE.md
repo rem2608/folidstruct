@@ -163,6 +163,18 @@ che è anche una vetrina. L'autore ha un PC con Windows 11 per le prove.
   `IApplicationActivationManager` (`--new --template-id ID --dir DIR`),
   così l'app ha l'identità del pacchetto. Il menù legge config.json con un
   piccolo lettore JSON proprio (nessuna dipendenza).
+- **Menù moderno, lezioni imparate** (provato sul PC dell'autore il
+  2026-11-10): sullo sfondo di una cartella e sul desktop il menù di
+  Windows 11 chiama `GetState`/`Invoke` **senza elementi**; se in quel caso
+  la voce si nasconde, compare solo in "Mostra altre opzioni". La cartella
+  si ricava dalla finestra in primo piano (Esplora file, scheda attiva
+  inclusa, tramite ShellWindows usato con `IDispatch` perché `exdisp.h`
+  va in conflitto con le altre intestazioni; sul desktop `Progman`/`WorkerW`
+  → cartella Desktop), come fa Windows Terminal. Clic destro *sopra* una
+  cartella: per ora solo in "Mostra altre opzioni"; all'autore non
+  interessa. Le prove si fanno con pacchetti firmati con un certificato di
+  test usa e getta (generato da GitHub Actions, `install-dev.ps1` lo rende
+  attendibile), non con la registrazione da sviluppatore.
 - **Nomi**: regole di Windows (`\ / : * ? " < > |`, CON/NUL/COM1…, niente
   punto o spazio finale, doppioni senza distinguere maiuscole).
 - **Compilazione**: qui (Linux) si compilano e provano solo Core e le parti
