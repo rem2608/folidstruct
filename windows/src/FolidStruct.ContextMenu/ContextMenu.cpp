@@ -253,13 +253,23 @@ namespace
         config.language = SystemLanguage();
 
         const std::wstring path = ConfigPath(config.family);
+        if (path.empty() || GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES)
+        {
+            // Not created yet (FolidStruct never opened since installation): show the
+            // example template the app will write; it is found by name.
+            Log(L"menu: family '" + config.family + L"', no config at '" + path + L"', example template");
+            if (!path.empty())
+                config.templates.push_back({L"", config.language == L"it" ? L"Grafica" : L"Graphics"});
+            return config;
+        }
+
         json::Value root;
         bool parsed = false;
         size_t size = 0;
         for (int attempt = 0; attempt < 3 && !parsed; ++attempt)
         {
             if (attempt > 0)
-                Sleep(50);
+                Sleep(50); // the app may be replacing the file
             const std::string text = ReadWholeFile(path, 16 << 20);
             size = text.size();
             parsed = json::Parse(FromUtf8(text), root);
@@ -630,8 +640,8 @@ public:
                                                 config.family));
         if (commands.empty())
         {
-            // First use, before FolidStruct has saved its templates: the app
-            // writes the default ones and opens with the first template.
+            // No templates, or a damaged configuration: the app opens with the
+            // first template, or explains what is wrong.
             commands.push_back(Make<SubCommand>(Action::NewProject, Label(config, L"New project…"), L"", L"",
                                                 config.family));
         }

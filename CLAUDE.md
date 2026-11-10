@@ -170,9 +170,15 @@ che è anche una vetrina. L'autore ha un PC con Windows 11 per le prove.
   si ricava dalla finestra in primo piano (Esplora file, scheda attiva
   inclusa, tramite ShellWindows usato con `IDispatch` perché `exdisp.h`
   va in conflitto con le altre intestazioni; sul desktop `Progman`/`WorkerW`
-  → cartella Desktop), come fa Windows Terminal. Clic destro *sopra* una
-  cartella: per ora solo in "Mostra altre opzioni"; all'autore non
-  interessa. Le prove si fanno con pacchetti firmati con un certificato di
+  → cartella Desktop), come fa Windows Terminal. Il clic destro *sopra*
+  una cartella funziona anch'esso nel menù moderno. **Sfondo del desktop:
+  Windows non chiama il componente** (il registro lo conferma): per i
+  pacchetti `ItemType` ammette solo estensioni, `*`, `Directory` e
+  `Directory\Background`. Prima dell'avvio dell'app `config.json` non
+  esiste (si cancella anche a ogni reinstallazione): il menù mostra il
+  modello di esempio e lo passa per nome. Registro diagnostico in
+  `%TEMP%\FolidStruct-menu.log` (da togliere o ridurre prima dello Store).
+  Le prove si fanno con pacchetti firmati con un certificato di
   test usa e getta (generato da GitHub Actions, `install-dev.ps1` lo rende
   attendibile), non con la registrazione da sviluppatore.
 - **Nomi**: regole di Windows (`\ / : * ? " < > |`, CON/NUL/COM1…, niente
