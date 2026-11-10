@@ -18,6 +18,7 @@
 #include <wrl/implements.h>
 #include <wrl/module.h>
 
+#include <cwchar>
 #include <string>
 #include <vector>
 
@@ -58,6 +59,44 @@ namespace
 
     // Read a whole file, sharing it fully so that FolidStruct can replace it
     // while the menu reads it.
+    std::string ToUtf8(const std::wstring& text)
+    {
+        if (text.empty())
+            return {};
+        const int length = WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0,
+                                               nullptr, nullptr);
+        std::string result(length, '\0');
+        WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), result.data(), length, nullptr,
+                            nullptr);
+        return result;
+    }
+
+    // Diagnostics: %TEMP%\FolidStruct-menu.log, one line per menu call, kept small.
+    void Log(const std::wstring& message)
+    {
+        wchar_t temp[MAX_PATH + 1] = {};
+        if (!GetTempPathW(MAX_PATH + 1, temp))
+            return;
+        const std::wstring path = std::wstring(temp) + L"FolidStruct-menu.log";
+        WIN32_FILE_ATTRIBUTE_DATA info = {};
+        const bool tooBig = GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &info)
+                            && (info.nFileSizeHigh > 0 || info.nFileSizeLow > 256 * 1024);
+        HANDLE file = CreateFileW(path.c_str(), tooBig ? GENERIC_WRITE : FILE_APPEND_DATA,
+                                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
+                                  tooBig ? CREATE_ALWAYS : OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (file == INVALID_HANDLE_VALUE)
+            return;
+        SYSTEMTIME now = {};
+        GetLocalTime(&now);
+        wchar_t prefix[64] = {};
+        swprintf_s(prefix, L"%02u:%02u:%02u.%03u pid %lu: ", now.wHour, now.wMinute, now.wSecond,
+                   now.wMilliseconds, GetCurrentProcessId());
+        const std::string line = ToUtf8(prefix + message) + "\r\n";
+        DWORD written = 0;
+        WriteFile(file, line.data(), static_cast<DWORD>(line.size()), &written, nullptr);
+        CloseHandle(file);
+    }
+
     std::string ReadWholeFile(const std::wstring& path, DWORD limit)
     {
         if (path.empty())
@@ -130,7 +169,22 @@ namespace
             }
         }
 
-        // …otherwise work it out from the manifest next to this DLL.
+        // …otherwise from the install folder, named after the package full name
+        // (C:\Program Files\WindowsApps\<name>_<version>_<arch>__<publisher id>)…
+        const std::wstring directory = ModuleDirectory();
+        const std::wstring fullName = directory.substr(directory.find_last_of(L'\\') + 1);
+        length = 0;
+        if (PackageFamilyNameFromFullName(fullName.c_str(), &length, nullptr) == ERROR_INSUFFICIENT_BUFFER)
+        {
+            std::wstring family(length, L'\0');
+            if (PackageFamilyNameFromFullName(fullName.c_str(), &length, family.data()) == ERROR_SUCCESS)
+            {
+                family.resize(length - 1);
+                return family;
+            }
+        }
+
+        // …or from the manifest next to this DLL (a package registered unpacked).
         const std::wstring manifestPath = ModuleDirectory() + L"\\AppxManifest.xml";
         const std::wstring manifest = FromUtf8(ReadWholeFile(manifestPath, 1 << 20));
         const size_t start = manifest.find(L"<Identity");
@@ -198,8 +252,21 @@ namespace
         config.family = PackageFamilyName();
         config.language = SystemLanguage();
 
+        const std::wstring path = ConfigPath(config.family);
         json::Value root;
-        if (!json::Parse(FromUtf8(ReadWholeFile(ConfigPath(config.family), 16 << 20)), root))
+        bool parsed = false;
+        size_t size = 0;
+        for (int attempt = 0; attempt < 3 && !parsed; ++attempt)
+        {
+            if (attempt > 0)
+                Sleep(50);
+            const std::string text = ReadWholeFile(path, 16 << 20);
+            size = text.size();
+            parsed = json::Parse(FromUtf8(text), root);
+        }
+        Log(L"menu: family '" + config.family + L"', config '" + path + L"', " + std::to_wstring(size)
+            + L" bytes, " + (parsed ? L"read" : L"NOT read"));
+        if (!parsed)
             return config;
 
         // The language chosen in FolidStruct, or the system language ("auto").
@@ -529,7 +596,16 @@ public:
 
     IFACEMETHODIMP GetState(IShellItemArray* items, BOOL, EXPCMDSTATE* state) override
     {
-        *state = FolderPath(items).empty() ? ECS_HIDDEN : ECS_ENABLED;
+        DWORD count = 0;
+        if (items)
+            items->GetCount(&count);
+        wchar_t foreground[64] = L"-";
+        if (HWND window = GetForegroundWindow())
+            GetClassNameW(GetAncestor(window, GA_ROOTOWNER), foreground, 64);
+        const std::wstring folder = FolderPath(items);
+        Log(L"state: " + std::to_wstring(count) + L" items, foreground '" + foreground + L"', folder '" + folder
+            + L"'");
+        *state = folder.empty() ? ECS_HIDDEN : ECS_ENABLED;
         return S_OK;
     }
 
