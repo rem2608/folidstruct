@@ -287,14 +287,24 @@ namespace
     }
 
     // The folder shown by the File Explorer window in the foreground, i.e. the
-    // one whose background was right-clicked (the approach of Windows Terminal).
+    // one whose background was right-clicked, or the Desktop (the approach of
+    // Windows Terminal).
     ComPtr<IShellItem> ForegroundExplorerFolder()
     {
         HWND window = GetForegroundWindow();
         if (window)
             window = GetAncestor(window, GA_ROOTOWNER);
         wchar_t className[64] = {};
-        if (!window || !GetClassNameW(window, className, 64) || wcscmp(className, L"CabinetWClass") != 0)
+        if (!window || !GetClassNameW(window, className, 64))
+            return nullptr;
+        // The desktop background: the user's Desktop folder.
+        if (wcscmp(className, L"Progman") == 0 || wcscmp(className, L"WorkerW") == 0)
+        {
+            ComPtr<IShellItem> desktop;
+            return SUCCEEDED(SHGetKnownFolderItem(FOLDERID_Desktop, KF_FLAG_DEFAULT, nullptr,
+                                                  IID_PPV_ARGS(&desktop))) ? desktop : nullptr;
+        }
+        if (wcscmp(className, L"CabinetWClass") != 0)
             return nullptr;
         // Every tab is a separate shell window; the active tab is the first one.
         const HWND activeTab = FindWindowExW(window, nullptr, L"ShellTabWindowClass", nullptr);
