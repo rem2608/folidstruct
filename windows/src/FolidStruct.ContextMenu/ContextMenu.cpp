@@ -10,6 +10,8 @@
 
 #include <windows.h>
 #include <appmodel.h>
+#include <exdisp.h>
+#include <shlguid.h>
 #include <shlobj.h>
 #include <shobjidl_core.h>
 #include <shlwapi.h>
@@ -233,17 +235,11 @@ namespace
 
     // --- Actions -----------------------------------------------------------
 
-    // The folder the menu was opened on (or in), if it is a real folder on disk.
-    std::wstring FolderPath(IShellItemArray* items)
+    // The path of a real folder on disk, or an empty string (e.g. This PC, a .zip file).
+    std::wstring PathOf(IShellItem* item)
     {
-        DWORD count = 0;
-        if (!items || FAILED(items->GetCount(&count)) || count != 1)
-            return {};
-        ComPtr<IShellItem> item;
-        if (FAILED(items->GetItemAt(0, &item)))
-            return {};
         SFGAOF attributes = 0;
-        if (FAILED(item->GetAttributes(SFGAO_FOLDER | SFGAO_FILESYSTEM | SFGAO_STREAM, &attributes))
+        if (!item || FAILED(item->GetAttributes(SFGAO_FOLDER | SFGAO_FILESYSTEM | SFGAO_STREAM, &attributes))
             || (attributes & (SFGAO_FOLDER | SFGAO_FILESYSTEM)) != (SFGAO_FOLDER | SFGAO_FILESYSTEM)
             || (attributes & SFGAO_STREAM)) // e.g. a .zip file
             return {};
@@ -253,6 +249,81 @@ namespace
         std::wstring result(path);
         CoTaskMemFree(path);
         return result;
+    }
+
+    // The folder shown by the File Explorer window in the foreground, i.e. the
+    // one whose background was right-clicked (the approach of Windows Terminal).
+    ComPtr<IShellItem> ForegroundExplorerFolder()
+    {
+        HWND window = GetForegroundWindow();
+        if (window)
+            window = GetAncestor(window, GA_ROOTOWNER);
+        wchar_t className[64] = {};
+        if (!window || !GetClassNameW(window, className, 64) || wcscmp(className, L"CabinetWClass") != 0)
+            return nullptr;
+        // Every tab is a separate shell window; the active tab is the first one.
+        const HWND activeTab = FindWindowExW(window, nullptr, L"ShellTabWindowClass", nullptr);
+
+        ComPtr<IShellWindows> windows;
+        long count = 0;
+        if (FAILED(CoCreateInstance(CLSID_ShellWindows, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&windows)))
+            || FAILED(windows->get_Count(&count)))
+            return nullptr;
+
+        ComPtr<IShellItem> firstMatch;
+        for (long i = 0; i < count; ++i)
+        {
+            VARIANT index;
+            VariantInit(&index);
+            index.vt = VT_I4;
+            index.lVal = i;
+            ComPtr<IDispatch> dispatch;
+            ComPtr<IWebBrowserApp> browserApp;
+            SHANDLE_PTR handle = 0;
+            if (windows->Item(index, &dispatch) != S_OK || !dispatch || FAILED(dispatch.As(&browserApp))
+                || FAILED(browserApp->get_HWND(&handle)) || reinterpret_cast<HWND>(handle) != window)
+                continue;
+
+            ComPtr<IServiceProvider> provider;
+            ComPtr<IShellBrowser> browser;
+            ComPtr<IShellView> view;
+            ComPtr<IFolderView> folderView;
+            ComPtr<IPersistFolder2> folder;
+            PIDLIST_ABSOLUTE pidl = nullptr;
+            if (FAILED(dispatch.As(&provider))
+                || FAILED(provider->QueryService(SID_STopLevelBrowser, IID_PPV_ARGS(&browser)))
+                || FAILED(browser->QueryActiveShellView(&view)) || FAILED(view.As(&folderView))
+                || FAILED(folderView->GetFolder(IID_PPV_ARGS(&folder))) || FAILED(folder->GetCurFolder(&pidl)))
+                continue;
+            ComPtr<IShellItem> item;
+            const HRESULT hr = SHCreateItemFromIDList(pidl, IID_PPV_ARGS(&item));
+            CoTaskMemFree(pidl);
+            if (FAILED(hr))
+                continue;
+
+            HWND tab = nullptr;
+            if (activeTab && SUCCEEDED(browser->GetWindow(&tab)) && tab == activeTab)
+                return item;
+            if (!firstMatch)
+                firstMatch = item;
+        }
+        return firstMatch;
+    }
+
+    // The folder the menu was opened on (or in), if it is a real folder on disk.
+    std::wstring FolderPath(IShellItemArray* items)
+    {
+        DWORD count = 0;
+        if (items && SUCCEEDED(items->GetCount(&count)) && count > 0)
+        {
+            ComPtr<IShellItem> item;
+            if (count != 1 || FAILED(items->GetItemAt(0, &item)))
+                return {};
+            return PathOf(item.Get());
+        }
+        // Background of a folder: the Windows 11 menu passes no items at all.
+        const ComPtr<IShellItem> folder = ForegroundExplorerFolder();
+        return PathOf(folder.Get());
     }
 
     // Start FolidStruct through its package, so that it runs with the package
