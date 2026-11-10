@@ -53,20 +53,31 @@ dotnet test --project tests/FolidStruct.Core.Tests
 
 ## Installing a test build
 
-1. Turn on **Developer Mode**: Settings › System › For developers.
-2. Download the `FolidStruct-windows-x64` artifact from the latest
-   *Windows* run on GitHub Actions and unzip it.
-3. In that folder, run:
+Builds from GitHub Actions are signed with a throwaway test certificate
+(created for each build; its private key is discarded) whose subject matches
+the package publisher. The artifact contains the package, the Windows App SDK
+runtime, the certificate (`FolidStruct-test.cer`) and `install-dev.ps1`.
+
+1. Download the `FolidStruct-windows-x64` artifact (or `-ARM64`) from the
+   latest *Windows* run on GitHub Actions and unzip it.
+2. In that folder, run:
 
    ```powershell
    powershell -ExecutionPolicy Bypass -File install-dev.ps1
    ```
 
-4. Open FolidStruct from the Start menu, then right-click a folder in File
-   Explorer. If the menu does not appear, restart File Explorer
-   (`Stop-Process -Name explorer`).
+   It asks for administrator rights to add the test certificate to the
+   *Trusted People* of the PC (replacing the one of a previous test build),
+   then installs the package like the Microsoft Store would.
+3. Open FolidStruct from the Start menu, then right-click a folder in File
+   Explorer.
 
-To remove it: `install-dev.ps1 -Uninstall`.
+Unsigned local builds (`build.ps1`) have no certificate: the script then
+registers the package unpacked, which needs **Developer Mode** (Settings ›
+System › For developers).
+
+To remove FolidStruct and the test certificate: `install-dev.ps1 -Uninstall`
+from an administrator terminal.
 
 ## Publishing in the Microsoft Store
 
