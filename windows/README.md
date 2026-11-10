@@ -8,7 +8,7 @@ It is meant to be published in the **Microsoft Store**, which signs the
 package. Builds from this repository are unsigned and can be installed for
 testing only (see below).
 
-> Status: in development, not yet tested on a real PC.
+> Status: tested on Windows 11 (x64); not yet published in the Store.
 
 ## How it is made
 
@@ -86,12 +86,15 @@ from an administrator terminal.
 
 ## Publishing in the Microsoft Store
 
-1. Create a free individual developer account in Partner Center and
-   reserve the name **FolidStruct**.
-2. Copy *Package/Identity/Name* and *Package/Identity/Publisher* from the
-   product's *Product identity* page into the `Identity` element of
-   `src/FolidStruct.App/Package.appxmanifest`.
-3. Build the Store packages (`./build.ps1 -Store`) and upload them.
-4. The `runFullTrust` capability needs a short justification in the
-   submission: FolidStruct is a desktop app that creates folders where the
-   user chooses and adds an entry to the File Explorer menu.
+The package identity in `src/FolidStruct.App/Package.appxmanifest` is the one
+Partner Center assigned (`Rem2608.FolidStruct`).
+
+1. Download the `FolidStruct-Store` artifact of the latest *Windows* run:
+   it holds the unsigned x64 and ARM64 packages (the Store signs them).
+2. In Partner Center, create a submission and upload both `.msix` files in
+   *Packages*.
+3. The `runFullTrust` capability needs a short justification: FolidStruct is
+   a desktop app that creates folders where the user chooses and adds an
+   entry to the File Explorer context menu.
+4. Each new version needs a higher version number
+   (`scripts/set-version.sh`).
