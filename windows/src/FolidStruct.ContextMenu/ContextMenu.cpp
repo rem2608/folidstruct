@@ -10,11 +10,10 @@
 
 #include <windows.h>
 #include <appmodel.h>
-#include <exdisp.h>
-#include <shlguid.h>
 #include <shlobj.h>
 #include <shobjidl_core.h>
 #include <shlwapi.h>
+#include <shlguid.h>
 #include <wrl/client.h>
 #include <wrl/implements.h>
 #include <wrl/module.h>
@@ -251,6 +250,42 @@ namespace
         return result;
     }
 
+    // ShellWindows (all File Explorer windows and tabs), used through IDispatch
+    // because <exdisp.h> clashes with the other shell headers.
+    constexpr CLSID ShellWindowsClsid = {0x9BA05972, 0xF6A8, 0x11CF, {0xA4, 0x42, 0x00, 0xA0, 0xC9, 0x0A, 0x8F, 0x39}};
+
+    HRESULT CallByName(IDispatch* object, const wchar_t* name, WORD flags, VARIANT* argument, VARIANT* result)
+    {
+        DISPID id = 0;
+        LPOLESTR names[] = {const_cast<LPOLESTR>(name)};
+        HRESULT hr = object->GetIDsOfNames(IID_NULL, names, 1, LOCALE_USER_DEFAULT, &id);
+        if (FAILED(hr))
+            return hr;
+        DISPPARAMS params = {argument, nullptr, argument ? 1u : 0u, 0};
+        return object->Invoke(id, IID_NULL, LOCALE_USER_DEFAULT, flags, &params, result, nullptr, nullptr);
+    }
+
+    // The folder of one File Explorer tab, if it belongs to `window`.
+    ComPtr<IShellItem> TabFolder(IDispatch* tab, HWND window, HWND* tabWindow)
+    {
+        ComPtr<IServiceProvider> provider;
+        ComPtr<IShellBrowser> browser;
+        ComPtr<IShellView> view;
+        ComPtr<IFolderView> folderView;
+        ComPtr<IPersistFolder2> folder;
+        PIDLIST_ABSOLUTE pidl = nullptr;
+        if (FAILED(tab->QueryInterface(IID_PPV_ARGS(&provider)))
+            || FAILED(provider->QueryService(SID_STopLevelBrowser, IID_PPV_ARGS(&browser)))
+            || FAILED(browser->GetWindow(tabWindow)) || GetAncestor(*tabWindow, GA_ROOT) != window
+            || FAILED(browser->QueryActiveShellView(&view)) || FAILED(view.As(&folderView))
+            || FAILED(folderView->GetFolder(IID_PPV_ARGS(&folder))) || FAILED(folder->GetCurFolder(&pidl)))
+            return nullptr;
+        ComPtr<IShellItem> item;
+        const HRESULT hr = SHCreateItemFromIDList(pidl, IID_PPV_ARGS(&item));
+        CoTaskMemFree(pidl);
+        return SUCCEEDED(hr) ? item : nullptr;
+    }
+
     // The folder shown by the File Explorer window in the foreground, i.e. the
     // one whose background was right-clicked (the approach of Windows Terminal).
     ComPtr<IShellItem> ForegroundExplorerFolder()
@@ -264,45 +299,33 @@ namespace
         // Every tab is a separate shell window; the active tab is the first one.
         const HWND activeTab = FindWindowExW(window, nullptr, L"ShellTabWindowClass", nullptr);
 
-        ComPtr<IShellWindows> windows;
-        long count = 0;
-        if (FAILED(CoCreateInstance(CLSID_ShellWindows, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&windows)))
-            || FAILED(windows->get_Count(&count)))
+        ComPtr<IDispatch> windows;
+        VARIANT count;
+        VariantInit(&count);
+        if (FAILED(CoCreateInstance(ShellWindowsClsid, nullptr, CLSCTX_ALL, IID_PPV_ARGS(&windows)))
+            || FAILED(CallByName(windows.Get(), L"Count", DISPATCH_PROPERTYGET, nullptr, &count))
+            || FAILED(VariantChangeType(&count, &count, 0, VT_I4)))
             return nullptr;
 
         ComPtr<IShellItem> firstMatch;
-        for (long i = 0; i < count; ++i)
+        for (LONG i = 0; i < count.lVal; ++i)
         {
             VARIANT index;
             VariantInit(&index);
             index.vt = VT_I4;
             index.lVal = i;
-            ComPtr<IDispatch> dispatch;
-            ComPtr<IWebBrowserApp> browserApp;
-            SHANDLE_PTR handle = 0;
-            if (windows->Item(index, &dispatch) != S_OK || !dispatch || FAILED(dispatch.As(&browserApp))
-                || FAILED(browserApp->get_HWND(&handle)) || reinterpret_cast<HWND>(handle) != window)
-                continue;
-
-            ComPtr<IServiceProvider> provider;
-            ComPtr<IShellBrowser> browser;
-            ComPtr<IShellView> view;
-            ComPtr<IFolderView> folderView;
-            ComPtr<IPersistFolder2> folder;
-            PIDLIST_ABSOLUTE pidl = nullptr;
-            if (FAILED(dispatch.As(&provider))
-                || FAILED(provider->QueryService(SID_STopLevelBrowser, IID_PPV_ARGS(&browser)))
-                || FAILED(browser->QueryActiveShellView(&view)) || FAILED(view.As(&folderView))
-                || FAILED(folderView->GetFolder(IID_PPV_ARGS(&folder))) || FAILED(folder->GetCurFolder(&pidl)))
+            VARIANT result;
+            VariantInit(&result);
+            if (FAILED(CallByName(windows.Get(), L"Item", DISPATCH_METHOD, &index, &result)))
                 continue;
             ComPtr<IShellItem> item;
-            const HRESULT hr = SHCreateItemFromIDList(pidl, IID_PPV_ARGS(&item));
-            CoTaskMemFree(pidl);
-            if (FAILED(hr))
-                continue;
-
             HWND tab = nullptr;
-            if (activeTab && SUCCEEDED(browser->GetWindow(&tab)) && tab == activeTab)
+            if (result.vt == VT_DISPATCH && result.pdispVal)
+                item = TabFolder(result.pdispVal, window, &tab);
+            VariantClear(&result);
+            if (!item)
+                continue;
+            if (activeTab && tab == activeTab)
                 return item;
             if (!firstMatch)
                 firstMatch = item;
