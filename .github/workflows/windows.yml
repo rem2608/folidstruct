@@ -81,6 +81,18 @@ jobs:
           if ($manifest -notmatch "windows.fileExplorerContextMenus") { throw "Menu not registered" }
           "{0}: {1:N1} MB, {2} files" -f $msix.Name, ($msix.Length / 1MB), $names.Count
 
+      - name: Keep the Store package
+        shell: pwsh
+        run: |
+          # Unsigned, as Partner Center wants it: the Store signs it.
+          New-Item -ItemType Directory store | Out-Null
+          Get-ChildItem windows/out -Recurse -Filter "FolidStruct.App_*.msix" | Copy-Item -Destination store/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-${{ matrix.platform }}
+          path: store/
+
       - name: Sign for testing
         shell: pwsh
         run: |
@@ -122,6 +134,17 @@ jobs:
         with:
           name: FolidStruct-windows-${{ matrix.platform }}
           path: artifact/
+
+  # Both Store packages in one download, to upload to Partner Center.
+  store:
+    needs: [test, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/upload-artifact/merge@v4
+        with:
+          name: FolidStruct-Store
+          pattern: store-*
+          delete-merged: true
 
   # Pre-release for testing: tag "windows-test-N" and push the tag.
   prerelease:
