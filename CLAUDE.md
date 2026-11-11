@@ -180,8 +180,8 @@ che è anche una vetrina. L'autore ha un PC con Windows 11 per le prove.
   ricontrollare se Windows renderà il menù personalizzabile dagli utenti.
   Prima dell'avvio dell'app `config.json` non
   esiste (si cancella anche a ogni reinstallazione): il menù mostra il
-  modello di esempio e lo passa per nome. Registro diagnostico in
-  `%TEMP%\FolidStruct-menu.log` (da togliere o ridurre prima dello Store).
+  modello di esempio e lo passa per nome. Il registro diagnostico usato
+  per queste prove (`%TEMP%\FolidStruct-menu.log`) è stato tolto.
   Le prove si fanno con pacchetti firmati con un certificato di
   test usa e getta (generato da GitHub Actions, `install-dev.ps1` lo rende
   attendibile), non con la registrazione da sviluppatore.
