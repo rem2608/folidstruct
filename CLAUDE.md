@@ -103,6 +103,7 @@ packaging/aur/PKGBUILD  base NON pubblicata per Arch (l'autore non vuole
 scripts/                set-version.sh, check-version.sh
 .github/workflows/      ci.yml (test a ogni push), release.yml (tag v* → .deb)
 tests/                  unittest (31 test)
+windows/                versione Windows (vedi sotto e windows/README.md)
 ```
 
 ### Configurazione (`~/.config/folidstruct/`)
@@ -138,6 +139,70 @@ tests/                  unittest (31 test)
   comportamenti diversi nel sistema; è documentata come eccezione nel
   README ("Show Desktop in Files").
 - Thunar: non supportato.
+
+## Versione Windows (in sviluppo, cartella `windows/`)
+
+Decisioni dell'autore (2026-11-09): **menù moderno di Windows 11** (non
+solo "Mostra altre opzioni") e distribuzione tramite **Microsoft Store**,
+che è anche una vetrina. L'autore ha un PC con Windows 11 per le prove.
+
+- **Perché lo Store**: il menù moderno richiede un pacchetto MSIX firmato.
+  Lo Store firma gratis (account sviluppatore gratuito per i privati dal
+  2025). Azure Artifact Signing non è disponibile per i privati in Italia
+  (solo USA/Canada); un certificato OV è a pagamento. Su GitHub restano
+  codice e link allo Store; si potrà aggiungere un MSIX firmato in futuro.
+- **Struttura**: `FolidStruct.Core` (C#, .NET 10, porting di core.py e
+  i18n.py, stesso formato di config.json/counters.json, gira anche su
+  Linux), `FolidStruct.App` (WinUI 3, Windows App SDK 1.8, MSIX con .NET
+  incluso), `FolidStruct.ContextMenu` (C++ con WRL, `IExplorerCommand`
+  registrato nel manifest per `Directory` e `Directory\Background`,
+  CLSID `8D25BF02-46D9-4D8F-987D-2E5F04A68DA2`, CRT statico).
+- **Configurazione**: nella cartella `LocalState` del pacchetto
+  (`%LOCALAPPDATA%\Packages\<famiglia>\LocalState`). Il menù la trova
+  dal nome della famiglia del pacchetto e apre l'app con
+  `IApplicationActivationManager` (`--new --template-id ID --dir DIR`),
+  così l'app ha l'identità del pacchetto. Il menù legge config.json con un
+  piccolo lettore JSON proprio (nessuna dipendenza).
+- **Menù moderno, lezioni imparate** (provato sul PC dell'autore il
+  2026-11-10): sullo sfondo di una cartella e sul desktop il menù di
+  Windows 11 chiama `GetState`/`Invoke` **senza elementi**; se in quel caso
+  la voce si nasconde, compare solo in "Mostra altre opzioni". La cartella
+  si ricava dalla finestra in primo piano (Esplora file, scheda attiva
+  inclusa, tramite ShellWindows usato con `IDispatch` perché `exdisp.h`
+  va in conflitto con le altre intestazioni; sul desktop `Progman`/`WorkerW`
+  → cartella Desktop), come fa Windows Terminal. Il clic destro *sopra*
+  una cartella funziona anch'esso nel menù moderno. **Sfondo del desktop:
+  Windows non chiama il componente** (il registro lo conferma): per i
+  pacchetti `ItemType` ammette solo estensioni, `*`, `Directory` e
+  `Directory\Background`. **Decisione dell'autore: nessuna soluzione
+  alternativa** (come per la scrivania di Ubuntu); documentata nel README
+  di Windows, con il consiglio di aprire Desktop in Esplora file. Da
+  ricontrollare se Windows renderà il menù personalizzabile dagli utenti.
+  Prima dell'avvio dell'app `config.json` non
+  esiste (si cancella anche a ogni reinstallazione): il menù mostra il
+  modello di esempio e lo passa per nome. Il registro diagnostico usato
+  per queste prove (`%TEMP%\FolidStruct-menu.log`) è stato tolto.
+  Le prove si fanno con pacchetti firmati con un certificato di
+  test usa e getta (generato da GitHub Actions, `install-dev.ps1` lo rende
+  attendibile), non con la registrazione da sviluppatore.
+- **Nomi**: regole di Windows (`\ / : * ? " < > |`, CON/NUL/COM1…, niente
+  punto o spazio finale, doppioni senza distinguere maiuscole).
+- **Compilazione**: qui (Linux) si compilano e provano solo Core e le parti
+  portabili del menù; app e DLL si compilano con GitHub Actions
+  (`.github/workflows/windows.yml`, x64 e ARM64), che controlla anche il
+  contenuto del pacchetto, lo firma con il certificato di prova e salva
+  gli artifact; si installano con `windows/scripts/install-dev.ps1` (le
+  build locali non firmate richiedono la Modalità sviluppatore). Il flusso
+  ha permessi di sola lettura, tranne la pre-release (tag `windows-test-*`,
+  finora mai usata).
+- **Identità del pacchetto** (`Package.appxmanifest`), da Partner Center
+  (2026-11-10): `Rem2608.FolidStruct`, editore
+  `CN=E952455A-9E62-4603-B379-B8387CA08CA4`, nome visualizzato `Rem2608`.
+  Il certificato di prova ha lo stesso editore (deve coincidere).
+- `scripts/set-version.sh` e `check-version.sh` aggiornano/controllano
+  anche `windows/src/FolidStruct.Core/Config.cs` (AppInfo.Version) e il
+  manifest MSIX (`X.Y.Z.0`).
+- Icone MSIX e .ico generate dallo SVG con `windows/scripts/make-assets.py`.
 
 ## Icona
 
@@ -208,10 +273,7 @@ meson setup build && meson test -C build
   quindi le cartelle le crea l'app principale), distribuita come `.dmg`
   firmato e notarizzato; codice in una cartella `macos/` con lo stesso
   formato dei modelli. Va sviluppata su un Mac con Xcode.
-- **Windows**: menù di Esplora file tramite registro (voci fisse da
-  rigenerare quando cambiano i modelli; su Windows 11 sotto "Mostra altre
-  opzioni"), validazione dei nomi più severa (`<>:"\|?*`, CON, NUL…),
-  lock diverso da `fcntl`.
+- **Windows**: in sviluppo, vedi la sezione "Versione Windows".
 - Possibili migliorie: ripristino della configurazione se danneggiata,
   supporto a Thunar.
 - Già valutato: l'idea è diffusa (es. PowerToys New+ di Microsoft,

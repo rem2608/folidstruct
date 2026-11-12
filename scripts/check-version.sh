@@ -8,10 +8,12 @@ meson=$(sed -n "s/^  version: '\(.*\)',/\1/p" meson.build)
 python=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' folidstruct/core.py)
 debian=$(sed -n '1s/.*(\(.*\)).*/\1/p' debian/changelog)
 aur=$(sed -n 's/^pkgver=//p' packaging/aur/PKGBUILD)
+windows=$(sed -n 's/.*public const string Version = "\(.*\)";/\1/p' windows/src/FolidStruct.Core/Config.cs)
+msix=$(sed -n 's/^    Version="\([0-9.]*\)\.0" \/>/\1/p' windows/src/FolidStruct.App/Package.appxmanifest)
 metainfo=$(grep -o '<release version="[^"]*"' data/io.github.rem2608.FolidStruct.metainfo.xml | head -1 | cut -d'"' -f2)
 
 status=0
-for name in python debian aur metainfo; do
+for name in python debian aur metainfo windows msix; do
     if [ "${!name}" != "$meson" ]; then
         echo "Version mismatch: meson.build has $meson, $name has ${!name}" >&2
         status=1

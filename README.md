@@ -169,6 +169,13 @@ python3 -m unittest -v     # run the tests
 2. Commit, then tag and push: `git tag v1.2.3 && git push --tags`.
    GitHub Actions builds the `.deb` and publishes the release.
 
+## Windows
+
+A Windows version, with the same templates and a FolidStruct submenu in
+the File Explorer context menu (including the Windows 11 menu), is in
+development in [`windows/`](windows/README.md) and will be published in
+the Microsoft Store.
+
 ## Credits
 
 FolidStruct was designed by [rem2608](https://github.com/rem2608) and

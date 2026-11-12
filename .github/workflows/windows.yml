@@ -1,0 +1,170 @@
+name: Windows
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    # A "windows-test-*" tag also publishes the packages as a pre-release,
+    # downloadable without a GitHub account.
+    tags: ["windows-test-*"]
+    paths: ["windows/**", ".github/workflows/windows.yml"]
+  pull_request:
+    paths: ["windows/**", ".github/workflows/windows.yml"]
+  workflow_dispatch:
+
+# Read-only by default; only the pre-release job may write.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: windows/global.json
+
+      - name: Core tests
+        working-directory: windows # global.json selects the test runner
+        run: dotnet test --project tests/FolidStruct.Core.Tests
+
+      - name: Menu tests
+        working-directory: windows/tests/ContextMenu
+        run: |
+          g++ -std=c++20 -Wall -Wextra -Werror -fsanitize=address,undefined \
+            -I../../src/FolidStruct.ContextMenu MenuTests.cpp \
+            ../../src/FolidStruct.ContextMenu/Json.cpp -o menu-tests
+          ./menu-tests
+
+  build:
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x64, ARM64]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: windows/global.json
+
+      - name: Check scripts
+        shell: pwsh
+        run: |
+          foreach ($script in Get-ChildItem windows -Recurse -Filter *.ps1) {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$null, [ref]$errors) | Out-Null
+            if ($errors) { $errors | ForEach-Object { Write-Host "$($script.Name): $_" }; throw "Syntax errors" }
+          }
+
+      - name: Build
+        shell: pwsh
+        run: windows/build.ps1 -Platform ${{ matrix.platform }}
+
+      - name: Check package
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $msix = Get-ChildItem windows/out -Recurse -Filter "FolidStruct.App_*.msix" | Select-Object -First 1
+          $zip = [IO.Compression.ZipFile]::OpenRead($msix.FullName)
+          $names = $zip.Entries.FullName
+          foreach ($file in "FolidStruct.exe", "FolidStruct.Core.dll", "FolidStruct.ContextMenu.dll",
+                            "Assets/FolidStruct.ico", "AppxManifest.xml", "resources.pri") {
+            if ($names -notcontains $file) { throw "Missing from the package: $file" }
+          }
+          $entry = $zip.GetEntry("AppxManifest.xml")
+          $manifest = [IO.StreamReader]::new($entry.Open()).ReadToEnd()
+          $zip.Dispose()
+          Write-Host $manifest
+          if ($manifest -notmatch "windows.fileExplorerContextMenus") { throw "Menu not registered" }
+          "{0}: {1:N1} MB, {2} files" -f $msix.Name, ($msix.Length / 1MB), $names.Count
+
+      - name: Keep the Store package
+        shell: pwsh
+        run: |
+          # Unsigned, as Partner Center wants it: the Store signs it.
+          New-Item -ItemType Directory store | Out-Null
+          Get-ChildItem windows/out -Recurse -Filter "FolidStruct.App_*.msix" | Copy-Item -Destination store/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: store-${{ matrix.platform }}
+          path: store/
+
+      - name: Sign for testing
+        shell: pwsh
+        run: |
+          # A throwaway certificate whose subject matches the manifest's Publisher: the
+          # package installs like a signed one once the public part (.cer) is trusted.
+          # The private key never leaves this job. The Store signs its own packages.
+          $publisher = ([xml](Get-Content windows/src/FolidStruct.App/Package.appxmanifest)).Package.Identity.Publisher
+          $cert = New-SelfSignedCertificate -Type Custom -Subject $publisher -KeyUsage DigitalSignature `
+            -FriendlyName "FolidStruct test" -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddMonths(6) `
+            -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+          $password = ConvertTo-SecureString -String ([guid]::NewGuid()) -Force -AsPlainText
+          $pfx = Join-Path $env:RUNNER_TEMP "test.pfx"
+          Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $password | Out-Null
+          Export-Certificate -Cert $cert -FilePath windows/out/FolidStruct-test.cer | Out-Null
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
+            Where-Object { $_.FullName -match "\\x64\\" } | Sort-Object FullName -Descending | Select-Object -First 1
+          $msix = Get-ChildItem windows/out -Recurse -Filter "FolidStruct.App_*.msix" | Select-Object -First 1
+          $plain = [Net.NetworkCredential]::new("", $password).Password
+          & $signtool.FullName sign /fd SHA256 /f $pfx /p $plain $msix.FullName
+          if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+          Remove-Item $pfx
+          Remove-Item $cert.PSPath
+
+      - name: Collect package
+        shell: pwsh
+        run: |
+          # The package, the Windows App SDK runtime for this platform only, and the script.
+          $arch = "${{ matrix.platform }}".ToLower()
+          $msix = Get-ChildItem windows/out -Recurse -Filter "FolidStruct.App_*.msix" | Select-Object -First 1
+          $runtime = Get-ChildItem windows/out -Recurse -Filter *.msix |
+            Where-Object { $_.FullName -match "\\Dependencies\\$arch\\" }
+          New-Item -ItemType Directory "artifact/Dependencies/$arch" -Force | Out-Null
+          Copy-Item $msix.FullName artifact/
+          Copy-Item $runtime.FullName "artifact/Dependencies/$arch/"
+          Copy-Item windows/out/FolidStruct-test.cer, windows/scripts/install-dev.ps1 artifact/
+          Get-ChildItem -Recurse -File artifact | Select-Object FullName, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FolidStruct-windows-${{ matrix.platform }}
+          path: artifact/
+
+  # Both Store packages in one download, to upload to Partner Center.
+  store:
+    needs: [test, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/upload-artifact/merge@v4
+        with:
+          name: FolidStruct-Store
+          pattern: store-*
+          delete-merged: true
+
+  # Pre-release for testing: tag "windows-test-N" and push the tag.
+  prerelease:
+    if: startsWith(github.ref, 'refs/tags/windows-test-')
+    needs: [test, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          for platform in x64 ARM64; do
+            (cd "FolidStruct-windows-$platform" && zip -r "../FolidStruct-windows-$platform.zip" .)
+          done
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease \
+            --title "Windows test build ($TAG)" \
+            --notes "Unsigned test build of the Windows version, for testing only. It needs Developer Mode (Settings > System > For developers). Download the zip for your PC (x64 for Intel/AMD, ARM64 for Snapdragon), unzip it, and in that folder run: powershell -ExecutionPolicy Bypass -File install-dev.ps1 - The final version will be published in the Microsoft Store." \
+            FolidStruct-windows-x64.zip FolidStruct-windows-ARM64.zip
