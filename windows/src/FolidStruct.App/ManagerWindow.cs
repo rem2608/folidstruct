@@ -19,7 +19,10 @@ internal sealed class ManagerWindow : Window
     private readonly InfoBar infoBar = new() { Severity = InfoBarSeverity.Error, IsClosable = true };
     private TemplateEditor? editor;
 
-    public ManagerWindow(Config config)
+    public Config Config => config;
+
+    /// <param name="startPage">"preferences" to open on the Preferences page.</param>
+    public ManagerWindow(Config config, string? startPage = null)
     {
         this.config = config;
         Title = "FolidStruct";
@@ -29,7 +32,7 @@ internal sealed class ManagerWindow : Window
         var scale = Native.ScaleFactor(WinRT.Interop.WindowNative.GetWindowHandle(this));
         AppWindow.Resize(new SizeInt32((int)(1000 * scale), (int)(720 * scale)));
         Content = root;
-        Build();
+        Build(startPage);
         // Projects created from File Explorer use up numbers meanwhile.
         Activated += (_, e) =>
         {
@@ -129,12 +132,20 @@ internal sealed class ManagerWindow : Window
         };
         nav.SelectionChanged += (_, e) => Show(e.SelectedItemContainer?.Tag);
 
-        nav.SelectedItem = select switch
+        if (select is "preferences")
         {
-            "preferences" => preferences,
-            Template t when FindItem(t) is { } item => item,
-            _ => nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => i.Tag is Template),
-        };
+            // A footer item can be selected only once the view is ready.
+            void SelectPreferences(object sender, RoutedEventArgs e)
+            {
+                nav.Loaded -= SelectPreferences;
+                nav.SelectedItem = preferences;
+            }
+            nav.Loaded += SelectPreferences;
+            return;
+        }
+        nav.SelectedItem = select is Template t && FindItem(t) is { } item
+            ? item
+            : nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => i.Tag is Template);
         if (nav.SelectedItem is null)
             Show(null);
     }
@@ -299,7 +310,8 @@ internal sealed class ManagerWindow : Window
             config.TranslateExample(CurrentLanguage);
             Save();
             // Rebuild the interface in the new language.
-            DispatcherQueue.TryEnqueue(() => Build(select: "preferences"));
+            // A new window in the new language, opened like at startup.
+            DispatcherQueue.TryEnqueue(() => App.Current?.ReopenManager("preferences"));
         };
         page.Children.Add(Ui.SectionTitle(T("Language")));
         page.Children.Add(new Card(T("Language"), T("“Automatic” uses the system language"), language));
