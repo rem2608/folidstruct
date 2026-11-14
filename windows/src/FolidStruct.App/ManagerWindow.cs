@@ -30,6 +30,12 @@ internal sealed class ManagerWindow : Window
         AppWindow.Resize(new SizeInt32((int)(1000 * scale), (int)(720 * scale)));
         Content = root;
         Build();
+        // Projects created from File Explorer use up numbers meanwhile.
+        Activated += (_, e) =>
+        {
+            if (e.WindowActivationState != WindowActivationState.Deactivated)
+                editor?.RefreshCounter();
+        };
     }
 
     public void BringToFront()
@@ -373,6 +379,7 @@ internal sealed class TemplateEditor
     private readonly Card nameCard;
     private readonly TextBlock title;
     private readonly FormatEditor formatEditor;
+    private readonly NumberBox next;
     private readonly StackPanel foldersPanel = new();
 
     public StackPanel Page { get; } = new();
@@ -407,7 +414,7 @@ internal sealed class TemplateEditor
         Page.Children.Add(nameCard);
 
         // Project folder name: this template's counter and optional format
-        var next = new NumberBox
+        next = new NumberBox
         {
             Minimum = 1,
             Maximum = 999999,
@@ -482,6 +489,14 @@ internal sealed class TemplateEditor
         Page.Children.Add(foldersHeader);
         Page.Children.Add(foldersPanel);
         RebuildFolders();
+    }
+
+    /// <summary>Show the current next number, which the New project window may have used.</summary>
+    public void RefreshCounter()
+    {
+        var value = Storage.ReadCounter(template);
+        if ((int)next.Value != value)
+            next.Value = value; // also redraws the format editor
     }
 
     public void FocusName()
