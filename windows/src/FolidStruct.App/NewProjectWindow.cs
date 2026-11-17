@@ -141,6 +141,8 @@ internal sealed class NewProjectWindow : Window
         var escape = new KeyboardAccelerator { Key = VirtualKey.Escape };
         escape.Invoked += (_, e) => { e.Handled = true; Close(); };
         root.KeyboardAccelerators.Add(escape);
+        // No "Esc" tooltip when the pointer rests on the window.
+        root.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden;
         root.Loaded += (_, _) =>
         {
             FitToContent(center: true);
