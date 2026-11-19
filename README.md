@@ -171,10 +171,13 @@ python3 -m unittest -v     # run the tests
 
 ## Windows
 
-A Windows version, with the same templates and a FolidStruct submenu in
-the File Explorer context menu (including the Windows 11 menu), is in
-development in [`windows/`](windows/README.md) and will be published in
-the Microsoft Store.
+FolidStruct for Windows 10 and 11 is available in the Microsoft Store, with
+the same templates and a FolidStruct submenu in the File Explorer context
+menu (including the Windows 11 menu).
+
+<a href="https://apps.microsoft.com/detail/9MVVM3VX3Z0F"><img src="https://get.microsoft.com/images/en-us%20dark.svg" alt="Get it from Microsoft" width="200"></a>
+
+The source code and build instructions are in [`windows/`](windows/README.md).
 
 ## Credits
 
