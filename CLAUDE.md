@@ -140,7 +140,17 @@ windows/                versione Windows (vedi sotto e windows/README.md)
   README ("Show Desktop in Files").
 - Thunar: non supportato.
 
-## Versione Windows (in sviluppo, cartella `windows/`)
+## Versione Windows (cartella `windows/`)
+
+**Pubblicata sul Microsoft Store il 2026-11-19**, versione 0.2.0.0:
+<https://apps.microsoft.com/detail/9MVVM3VX3Z0F> (Store ID `9MVVM3VX3Z0F`,
+link per l'app Store `ms-windows-store://pdp/?productid=9MVVM3VX3Z0F`).
+Superata la certificazione al primo invio. Scheda in italiano e inglese,
+categoria Productivity (secondaria Utilities + tools), gratuita, PEGI 3,
+pubblicazione manuale ("Pubblica ora"). Informativa sulla privacy in
+`PRIVACY.md` (richiesta dallo Store per via di `runFullTrust`).
+Aggiornamenti: alzare la versione (`scripts/set-version.sh`), scaricare
+l'artifact `FolidStruct-Store` e caricarlo in una nuova submission.
 
 Decisioni dell'autore (2026-11-09): **menù moderno di Windows 11** (non
 solo "Mostra altre opzioni") e distribuzione tramite **Microsoft Store**,
@@ -244,6 +254,9 @@ simbolica a 16 px (cartella con tre piste, una terminante in un nodo).
 - **0.2.0** (2026-11-08): formato del nome a blocchi (testo fisso, campi,
   scelte), blocchi riordinabili, separatore, contatore per modello,
   migrazione automatica della configurazione.
+- **Windows 0.2.0.0** (2026-11-19): prima versione per Windows, pubblicata
+  sul Microsoft Store; stesse funzioni della 0.2.0 di Linux, menù moderno
+  di Windows 11 (non sullo sfondo del desktop).
 
 ## Sviluppo
 
@@ -273,7 +286,7 @@ meson setup build && meson test -C build
   quindi le cartelle le crea l'app principale), distribuita come `.dmg`
   firmato e notarizzato; codice in una cartella `macos/` con lo stesso
   formato dei modelli. Va sviluppata su un Mac con Xcode.
-- **Windows**: in sviluppo, vedi la sezione "Versione Windows".
+- **Windows**: pubblicata sullo Store, vedi la sezione "Versione Windows".
 - Possibili migliorie: ripristino della configurazione se danneggiata,
   supporto a Thunar.
 - Già valutato: l'idea è diffusa (es. PowerToys New+ di Microsoft,

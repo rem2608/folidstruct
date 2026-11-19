@@ -8,7 +8,8 @@ It is meant to be published in the **Microsoft Store**, which signs the
 package. Builds from this repository are unsigned and can be installed for
 testing only (see below).
 
-> Status: tested on Windows 11 (x64); not yet published in the Store.
+> Published in the Microsoft Store:
+> <https://apps.microsoft.com/detail/9MVVM3VX3Z0F> (Store ID `9MVVM3VX3Z0F`).
 
 ## How it is made
 
